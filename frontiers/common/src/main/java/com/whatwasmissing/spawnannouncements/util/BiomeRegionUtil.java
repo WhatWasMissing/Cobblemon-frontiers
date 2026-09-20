@@ -20,9 +20,21 @@ public final class BiomeRegionUtil {
 
     public static String describe(ServerLevel level, BlockPos position, AnnouncementConfig config) {
         ResourceKey<Level> dimension = level.dimension();
+        String biomeId = level.getBiome(position).unwrapKey()
+                .map(key -> key.location().toString())
+                .orElse("minecraft:plains")
+                .toLowerCase(Locale.ROOT);
+        String path = biomeId.substring(biomeId.indexOf(':') + 1);
+
+        if (config != null && config.regionOverrides != null) {
+            String configured = config.regionOverrides.get(biomeId);
+            if (configured == null) configured = config.regionOverrides.get(path);
+            if (configured != null && !configured.isBlank()) return configured;
+        }
+        String registered = FrontierCompatibilityHooks.regionAlias(biomeId);
+        if (registered != null) return registered;
+
         if (dimension == Level.NETHER) {
-            String path = level.getBiome(position).unwrapKey()
-                    .map(key -> key.location().getPath()).orElse("").toLowerCase(Locale.ROOT);
             if (contains(path, "crimson")) return "the crimson wastes";
             if (contains(path, "warped")) return "the warped wastes";
             if (contains(path, "soul")) return "the soul valleys";
@@ -30,22 +42,8 @@ public final class BiomeRegionUtil {
             return "the Nether";
         }
         if (dimension == Level.END) {
-            String path = level.getBiome(position).unwrapKey()
-                    .map(key -> key.location().getPath()).orElse("").toLowerCase(Locale.ROOT);
             return contains(path, "void") ? "the End void" : "the End";
         }
-
-        String path = level.getBiome(position).unwrapKey()
-                .map(key -> key.location().getPath())
-                .orElse("wilds")
-                .toLowerCase(Locale.ROOT);
-
-        if (config != null && config.regionOverrides != null) {
-            String configured = config.regionOverrides.get(path);
-            if (configured != null && !configured.isBlank()) return configured;
-        }
-        String registered = FrontierCompatibilityHooks.regionAlias(path);
-        if (registered != null) return registered;
 
         // Many cave Pokémon inherit the surface biome identifier. Sky access
         // and depth are therefore more reliable than a biome name alone.

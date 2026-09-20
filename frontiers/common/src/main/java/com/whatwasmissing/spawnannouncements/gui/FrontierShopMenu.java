@@ -305,7 +305,7 @@ public final class FrontierShopMenu extends ChestMenu {
         // Every top-inventory interaction is consumed by the shop. This prevents
         // display items being removed, shift-clicked, dragged, or swapped away.
         if (slotId >= 0 && slotId < SHOP_SIZE) {
-            if (clickType == ClickType.PICKUP) {
+            if (clickType == ClickType.PICKUP && button == 0) {
                 if (slotId == 49 && page > 0) {
                     changePage(player, -1);
                     return;

@@ -8,8 +8,10 @@ import org.slf4j.Logger;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -120,15 +122,19 @@ public final class AnnouncementConfig {
 
     public static AnnouncementConfig load(Path path, Logger logger) {
         AnnouncementConfig config = null;
+        boolean unreadable = false;
         try {
             if (Files.exists(path)) {
                 String json = Files.readString(path, StandardCharsets.UTF_8);
                 config = GSON.fromJson(json, AnnouncementConfig.class);
+                if (config == null) unreadable = true;
             }
         } catch (IOException | JsonParseException | IllegalStateException exception) {
+            unreadable = true;
             logger.error("Could not read {}. Recreating the default configuration.", path, exception);
         }
 
+        if (unreadable) preserveUnreadableConfig(path, logger);
         if (config == null) {
             config = new AnnouncementConfig();
         }
@@ -140,9 +146,26 @@ public final class AnnouncementConfig {
     public static void save(Path path, AnnouncementConfig config, Logger logger) {
         try {
             Files.createDirectories(path.getParent());
-            Files.writeString(path, GSON.toJson(config), StandardCharsets.UTF_8);
+            Path temporary = path.resolveSibling(path.getFileName() + ".tmp");
+            Files.writeString(temporary, GSON.toJson(config), StandardCharsets.UTF_8);
+            try {
+                Files.move(temporary, path, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+            } catch (AtomicMoveNotSupportedException ignored) {
+                Files.move(temporary, path, StandardCopyOption.REPLACE_EXISTING);
+            }
         } catch (IOException exception) {
             logger.error("Could not save {}.", path, exception);
+        }
+    }
+
+    private static void preserveUnreadableConfig(Path path, Logger logger) {
+        if (!Files.exists(path)) return;
+        try {
+            Path backup = path.resolveSibling(path.getFileName() + ".corrupt-" + System.currentTimeMillis());
+            Files.move(path, backup, StandardCopyOption.REPLACE_EXISTING);
+            logger.error("Moved unreadable configuration to {}.", backup);
+        } catch (IOException backupException) {
+            logger.error("Could not preserve unreadable configuration {}.", path, backupException);
         }
     }
 

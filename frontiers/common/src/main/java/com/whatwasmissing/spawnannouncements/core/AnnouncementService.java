@@ -121,63 +121,63 @@ public final class AnnouncementService {
     private static void onPokemonCaptured(ServerLevel level, ServerPlayer player, Pokemon pokemon) {
         AnnouncementKind rareKind = ledger.consumeRareSpawn(pokemon.getUuid(), LOGGER);
         FrontierLedger.SignalRecord signal = ledger.resolveSignal(pokemon.getUuid(), "secured", LOGGER);
-        FrontierLedger.CaptureUpdate update = ledger.recordCapture(player, pokemon, rareKind, signal, signal != null, config, LOGGER);
+        FrontierLedger.CaptureUpdate update = ledger.recordCapture(player, pokemon, rareKind, signal, config, LOGGER);
         if (signal != null) {
             broadcast(level, player.blockPosition(), Component.literal("A field signal in " + signal.region + " has gone quiet.")
                     .withStyle(ChatFormatting.DARK_AQUA));
         }
 
+        List<Component> feedback = new ArrayList<>();
         if (update.signalBonus() > 0) {
-            personal(player, Component.literal("Signal-linked capture: +" + update.signalBonus() + " research bonus.")
+            feedback.add(Component.literal("Signal-linked capture: +" + update.signalBonus() + " research bonus.")
                     .withStyle(ChatFormatting.AQUA));
         }
         if (update.aftermathBonus() > 0) {
-            personal(player, Component.literal("Signal aftermath: +" + update.aftermathBonus() + " research bonus.")
+            feedback.add(Component.literal("Signal aftermath: +" + update.aftermathBonus() + " research bonus.")
                     .withStyle(ChatFormatting.DARK_AQUA));
         }
         if (update.streakBonus() > 0) {
-            personal(player, Component.literal("Regional survey streak " + update.regionalStreak() + ": +" + update.streakBonus() + " research bonus.")
+            feedback.add(Component.literal("Regional survey streak " + update.regionalStreak() + ": +" + update.streakBonus() + " research bonus.")
                     .withStyle(ChatFormatting.GREEN));
         }
         if (update.rareBonus() > 0) {
-            personal(player, Component.literal("Rare capture bounty: +" + update.rareBonus() + " research bonus.")
+            feedback.add(Component.literal("Rare capture bounty: +" + update.rareBonus() + " research bonus.")
                     .withStyle(ChatFormatting.LIGHT_PURPLE));
         }
         if (update.dailyChallengeBonus() > 0) {
-            personal(player, Component.literal("Daily research goal complete: +"
+            feedback.add(Component.literal("Daily research goal complete: +"
                             + update.dailyChallengeBonus() + " research points.")
                     .withStyle(ChatFormatting.GOLD));
         }
         if (update.contractBonus() > 0) {
-            personal(player, Component.literal("Expedition contract complete: "
+            feedback.add(Component.literal("Expedition contract complete: "
                             + String.join(", ", update.completedContracts()) + " · +"
                             + update.contractBonus() + " research.")
                     .withStyle(ChatFormatting.GOLD));
         }
         if (update.communityBonus() > 0) {
-            personal(player, Component.literal("Community research complete: +" + update.communityBonus()
+            feedback.add(Component.literal("Community research complete: +" + update.communityBonus()
                             + " research for contributing to " + update.communityEvent().title() + ".")
                     .withStyle(ChatFormatting.GREEN));
         }
         if (update.newFieldGuideEntry()) {
-            personal(player, Component.literal("Field Guide updated: " + update.fieldGuideSize()
+            feedback.add(Component.literal("Field Guide updated: " + update.fieldGuideSize()
                             + " species recorded.")
                     .withStyle(ChatFormatting.LIGHT_PURPLE));
         }
-        personal(player, Component.literal("Field research: +" + update.pointsEarned()
+        feedback.add(Component.literal("Field research: +" + update.pointsEarned()
                         + " · spendable balance: " + update.totalPoints()
                         + " · open Frontier Intelligence with K to exchange it.")
                 .withStyle(ChatFormatting.AQUA));
         if (player.containerMenu instanceof FrontierShopMenu menu) {
             menu.refreshForServer(player);
         }
-        if (update.newMilestones().isEmpty()) return;
-
         for (int milestone : update.newMilestones()) {
             grantMilestoneReward(player, milestone);
-            personal(player, Component.literal("Field research milestone reached: " + milestone + " points. A reward has been issued.")
+            feedback.add(Component.literal("Field research milestone reached: " + milestone + " points. A reward has been issued.")
                     .withStyle(ChatFormatting.GOLD));
         }
+        personal(player, feedback);
     }
 
     private static void grantMilestoneReward(ServerPlayer player, int milestone) {
@@ -207,12 +207,20 @@ public final class AnnouncementService {
                 .append(Component.literal(body).withStyle(colour));
     }
 
-    private static void personal(ServerPlayer player, Component message) {
+    private static void personal(ServerPlayer player, List<Component> messages) {
         String mode = ledger == null ? "chat" : ledger.feedbackMode(player.getUUID());
         if (mode == null || mode.isBlank()) mode = config == null ? "chat" : config.captureFeedbackMode;
-        if ("silent".equals(mode)) return;
-        if ("actionbar".equals(mode)) player.displayClientMessage(message, true);
-        else player.sendSystemMessage(message);
+        if ("silent".equals(mode) || messages == null || messages.isEmpty()) return;
+        if ("actionbar".equals(mode)) {
+            MutableComponent summary = Component.empty();
+            for (int index = 0; index < messages.size(); index++) {
+                if (index > 0) summary.append(Component.literal(" · ").withStyle(ChatFormatting.DARK_GRAY));
+                summary.append(messages.get(index));
+            }
+            player.displayClientMessage(summary, true);
+            return;
+        }
+        messages.forEach(player::sendSystemMessage);
     }
 
     private static void broadcast(ServerLevel sourceLevel, BlockPos sourcePosition, Component message) {

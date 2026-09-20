@@ -22,13 +22,18 @@ public final class FrontierCompatibilityHooks {
 
     private FrontierCompatibilityHooks() { }
 
-    public static void registerRegionAlias(String biomePath, String broadRegion) {
-        if (biomePath == null || biomePath.isBlank() || broadRegion == null || broadRegion.isBlank()) return;
-        REGION_ALIASES.put(biomePath.toLowerCase(java.util.Locale.ROOT), broadRegion.trim());
+    public static void registerRegionAlias(String biomeIdOrPath, String broadRegion) {
+        if (biomeIdOrPath == null || biomeIdOrPath.isBlank() || broadRegion == null || broadRegion.isBlank()) return;
+        REGION_ALIASES.put(biomeIdOrPath.toLowerCase(java.util.Locale.ROOT), broadRegion.trim());
     }
 
-    public static String regionAlias(String biomePath) {
-        return biomePath == null ? null : REGION_ALIASES.get(biomePath.toLowerCase(java.util.Locale.ROOT));
+    public static String regionAlias(String biomeIdOrPath) {
+        if (biomeIdOrPath == null) return null;
+        String key = biomeIdOrPath.toLowerCase(java.util.Locale.ROOT);
+        String exact = REGION_ALIASES.get(key);
+        if (exact != null) return exact;
+        int separator = key.indexOf(':');
+        return separator < 0 ? null : REGION_ALIASES.get(key.substring(separator + 1));
     }
 
     public static void registerRarityProvider(

@@ -88,18 +88,18 @@ public final class FrontierLedger implements AutoCloseable {
         try {
             if (Files.exists(path)) {
                 LedgerData loaded = GSON.fromJson(Files.readString(path, StandardCharsets.UTF_8), LedgerData.class);
-                if (loaded != null) loadedData = loaded;
+                if (loaded != null) {
+                    loadedData = loaded;
+                } else {
+                    unreadable = true;
+                    logger.error("Frontier ledger {} contained no data. Keeping a corrupt backup and starting empty.", path);
+                    preserveUnreadableLedger(path, logger);
+                }
             }
         } catch (IOException | JsonParseException | IllegalStateException exception) {
             unreadable = true;
             logger.error("Could not read frontier ledger {}. Keeping a corrupt backup and starting empty.", path, exception);
-            try {
-                Path backup = path.resolveSibling(path.getFileName() + ".corrupt-" + System.currentTimeMillis());
-                Files.move(path, backup, StandardCopyOption.REPLACE_EXISTING);
-                logger.error("Moved unreadable frontier ledger to {}.", backup);
-            } catch (IOException backupException) {
-                logger.error("Could not preserve unreadable frontier ledger {}.", path, backupException);
-            }
+            preserveUnreadableLedger(path, logger);
         }
         loadedData.normalise();
         FrontierLedger ledger = new FrontierLedger(path, loadedData, logger);
@@ -107,6 +107,17 @@ public final class FrontierLedger implements AutoCloseable {
         ledger.ensureCommunityEvent();
         if (unreadable) ledger.markDirty();
         return ledger;
+    }
+
+    private static void preserveUnreadableLedger(Path path, org.slf4j.Logger logger) {
+        if (!Files.exists(path)) return;
+        try {
+            Path backup = path.resolveSibling(path.getFileName() + ".corrupt-" + System.currentTimeMillis());
+            Files.move(path, backup, StandardCopyOption.REPLACE_EXISTING);
+            logger.error("Moved unreadable frontier ledger to {}.", backup);
+        } catch (IOException backupException) {
+            logger.error("Could not preserve unreadable frontier ledger {}.", path, backupException);
+        }
     }
 
     /** Marks the ledger for a batched atomic save. */
@@ -213,11 +224,11 @@ public final class FrontierLedger implements AutoCloseable {
 
     public synchronized CaptureUpdate recordCapture(ServerPlayer player, Pokemon pokemon, AnnouncementKind rareKind,
                                                     org.slf4j.Logger ignored) {
-        return recordCapture(player, pokemon, rareKind, null, false, null, ignored);
+        return recordCapture(player, pokemon, rareKind, null, null, ignored);
     }
 
     public synchronized CaptureUpdate recordCapture(ServerPlayer player, Pokemon pokemon, AnnouncementKind rareKind,
-                                                    SignalRecord linkedSignal, boolean signalJustSecured,
+                                                    SignalRecord linkedSignal,
                                                     AnnouncementConfig config, org.slf4j.Logger ignored) {
         prune(System.currentTimeMillis());
         ensureCommunityEvent();
@@ -655,6 +666,7 @@ public final class FrontierLedger implements AutoCloseable {
             if (feedbackMode == null) feedbackMode = "";
             points = Math.max(0, points);
             totalEarned = Math.max(points, totalEarned);
+            regionCaptures.entrySet().removeIf(entry -> entry.getKey() == null || entry.getValue() == null || entry.getValue() < 0);
             regionPoints.entrySet().removeIf(entry -> entry.getKey() == null || entry.getValue() == null || entry.getValue() < 0);
             contractProgress.entrySet().removeIf(entry -> entry.getKey() == null || entry.getValue() == null || entry.getValue() < 0);
             fieldGuide.removeIf(entry -> entry == null || entry.isBlank());
@@ -662,6 +674,21 @@ public final class FrontierLedger implements AutoCloseable {
             bestRegionalStreak = Math.max(regionalStreak, Math.max(0, bestRegionalStreak));
             dailyCaptures = Math.max(0, Math.min(DAILY_CAPTURE_GOAL, dailyCaptures));
             if (dailyCaptures >= DAILY_CAPTURE_GOAL) dailyChallengeCompleted = true;
+
+            long regionalTotal = regionPoints.values().stream()
+                    .filter(java.util.Objects::nonNull)
+                    .mapToLong(value -> Math.max(0L, value))
+                    .sum();
+            long excess = Math.max(0L, regionalTotal - points);
+            if (excess > 0L) {
+                for (Map.Entry<String, Integer> entry : regionPoints.entrySet()) {
+                    if (excess <= 0L) break;
+                    int available = Math.max(0, entry.getValue());
+                    int reduction = (int) Math.min((long) available, excess);
+                    entry.setValue(available - reduction);
+                    excess -= reduction;
+                }
+            }
         }
     }
 

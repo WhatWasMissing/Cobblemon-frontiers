@@ -122,7 +122,10 @@ public final class AnnouncementCommands {
             player.sendSystemMessage(Component.literal("Capture Pokémon to begin your collection journal.")
                     .withStyle(ChatFormatting.GRAY));
         } else {
-            player.sendSystemMessage(Component.literal(String.join(", ", entries)).withStyle(ChatFormatting.GRAY));
+            int visible = Math.min(entries.size(), 80);
+            String listed = String.join(", ", entries.subList(0, visible));
+            if (visible < entries.size()) listed += " … (" + (entries.size() - visible) + " more; use the dashboard to browse)";
+            player.sendSystemMessage(Component.literal(listed).withStyle(ChatFormatting.GRAY));
         }
         return 1;
     }

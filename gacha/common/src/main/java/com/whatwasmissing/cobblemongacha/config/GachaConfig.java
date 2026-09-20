@@ -10,8 +10,10 @@ import org.slf4j.Logger;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -50,7 +52,7 @@ public final class GachaConfig {
 
     public static GachaConfig load(Path path, Logger logger) {
         GachaConfig config = new GachaConfig();
-        boolean writeDefaults = false;
+        boolean writeDefaults = !Files.exists(path);
         boolean migrateLegacyBanners = false;
         try {
             Files.createDirectories(path.getParent());
@@ -59,22 +61,44 @@ public final class GachaConfig {
                 if (loaded != null) {
                     migrateLegacyBanners = isLegacyThemedBannerSet(loaded.banners);
                     config = loaded;
+                } else {
+                    writeDefaults = true;
+                    preserveUnreadableConfig(path, logger);
                 }
             } else {
                 writeDefaults = true;
             }
         } catch (IOException | JsonParseException | IllegalStateException exception) {
             logger.error("Could not load Cobblemon Gacha config at {}. Using defaults.", path, exception);
+            writeDefaults = true;
+            preserveUnreadableConfig(path, logger);
         }
         config.normalise();
         if (writeDefaults || migrateLegacyBanners) {
             try {
-                Files.writeString(path, GSON.toJson(config), StandardCharsets.UTF_8);
+                Path temporary = path.resolveSibling(path.getFileName() + ".tmp");
+                Files.writeString(temporary, GSON.toJson(config), StandardCharsets.UTF_8);
+                try {
+                    Files.move(temporary, path, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+                } catch (AtomicMoveNotSupportedException ignored) {
+                    Files.move(temporary, path, StandardCopyOption.REPLACE_EXISTING);
+                }
             } catch (IOException exception) {
                 logger.error("Could not write Cobblemon Gacha defaults at {}.", path, exception);
             }
         }
         return config;
+    }
+
+    private static void preserveUnreadableConfig(Path path, Logger logger) {
+        if (!Files.exists(path)) return;
+        try {
+            Path backup = path.resolveSibling(path.getFileName() + ".corrupt-" + System.currentTimeMillis());
+            Files.move(path, backup, StandardCopyOption.REPLACE_EXISTING);
+            logger.error("Moved unreadable Cobblemon Gacha configuration to {}.", backup);
+        } catch (IOException backupException) {
+            logger.error("Could not preserve unreadable Cobblemon Gacha configuration {}.", path, backupException);
+        }
     }
 
     private void normalise() {
