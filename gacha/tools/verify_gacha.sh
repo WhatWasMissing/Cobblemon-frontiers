@@ -8,6 +8,7 @@ test -f "$root/common/src/main/java/com/whatwasmissing/cobblemongacha/core/Gacha
 test -f "$root/common/src/main/java/com/whatwasmissing/cobblemongacha/core/GachaUpgradeService.java"
 test -f "$root/common/src/main/java/com/whatwasmissing/cobblemongacha/gui/UpgradeScreen.java"
 test -f "$root/common/src/main/java/com/whatwasmissing/cobblemongacha/network/GachaPullResultPayload.java"
+test -f "$root/tools/verify_pity.sh"
 test -f "$root/neoforge/src/main/resources/META-INF/neoforge.mods.toml"
 test -f "$root/fabric/src/main/resources/fabric.mod.json"
 
@@ -21,6 +22,16 @@ rg -q 'key\.cobblemon_gacha\.open' "$root/common/src/main/resources/assets/cobbl
 rg -q 'GLFW_KEY_G' "$root/fabric/src/main/java/com/whatwasmissing/cobblemongacha/CobblemonGachaFabricClient.java"
 rg -q 'GLFW_KEY_G' "$root/neoforge/src/main/java/com/whatwasmissing/cobblemongacha/CobblemonGachaNeoForgeClient.java"
 rg -q 'rarePityDraws|legendaryPityDraws|shinyChance' "$root/common/src/main/java/com/whatwasmissing/cobblemongacha/core/GachaService.java"
+rg -q 'GachaRarity\.LEGENDARY, 0\.88|GachaRarity\.MYTHIC, 0\.88' \
+    "$root/common/src/main/java/com/whatwasmissing/cobblemongacha/config/GachaConfig.java"
+rg -q 'migrateDefaultTierWeights|sameWeight\(entry\.weight, 0\.05\)|entry\.weight = 0\.88' \
+    "$root/common/src/main/java/com/whatwasmissing/cobblemongacha/config/GachaConfig.java"
+rg -q 'tenPullGuarantee = pulls == 10 && index == pulls - 1 && !rareSeen' \
+    "$root/common/src/main/java/com/whatwasmissing/cobblemongacha/core/GachaService.java"
+rg -q 'currentPity >= config\.rarePityDraws - 1|currentLegendaryPity >= config\.legendaryPityDraws - 1' \
+    "$root/common/src/main/java/com/whatwasmissing/cobblemongacha/core/GachaService.java"
+rg -q 'result\.rarity\(\)\.atLeast\(GachaRarity\.RARE\).*profile\.pity = 0|result\.rarity\(\)\.atLeast\(GachaRarity\.LEGENDARY\).*profile\.legendaryPity = 0' \
+    "$root/common/src/main/java/com/whatwasmissing/cobblemongacha/core/GachaLedger.java"
 rg -q 'POKEMON_CAPTURED' "$root/common/src/main/java/com/whatwasmissing/cobblemongacha/core/GachaService.java"
 rg -q 'handleInventoryMouseClick' "$root/common/src/main/java/com/whatwasmissing/cobblemongacha/gui/GachaScreen.java"
 rg -q 'GachaMenuSyncPayload|applyServerSnapshot|serverEpochSeconds|gamblingCooldownSeconds' "$root/common/src/main/java/com/whatwasmissing/cobblemongacha/gui/GachaMenu.java"
@@ -115,5 +126,7 @@ if [ "$banner_count" -lt 10 ]; then
   echo "Expected at least 10 regional banner groups, found $banner_count" >&2
   exit 1
 fi
+
+bash "$root/tools/verify_pity.sh"
 
 echo "Cobblemon Gacha static validation passed."

@@ -69,7 +69,7 @@ The direction was cross-checked against established Minecraft UI patterns:
 - Tickets are earned from captures and are not checked every tick.
 - A ten-pull costs exactly ten tickets by default.
 - Pity resets on Rare or better.
-- The default pool is intentionally broad, with the strongest rewards gated by low weights and pity rather than a hidden command.
+- The default pool is intentionally broad, with the strongest rewards gated by low weights and pity rather than a hidden command; standard regional Legendary and Mythic entries resolve to roughly 0.1% each.
 - Operators can tune the entire system in JSON without recompiling.
 
 ## Item-to-Pokémon contracts

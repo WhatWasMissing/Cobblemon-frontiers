@@ -74,7 +74,8 @@ public final class GachaConfig {
             preserveUnreadableConfig(path, logger);
         }
         config.normalise();
-        if (writeDefaults || migrateLegacyBanners) {
+        boolean migrateDefaultTierWeights = config.migrateDefaultTierWeights();
+        if (writeDefaults || migrateLegacyBanners || migrateDefaultTierWeights) {
             try {
                 Path temporary = path.resolveSibling(path.getFileName() + ".tmp");
                 Files.writeString(temporary, GSON.toJson(config), StandardCharsets.UTF_8);
@@ -88,6 +89,35 @@ public final class GachaConfig {
             }
         }
         return config;
+    }
+
+    /**
+     * Raises the pre-0.1% shipped Legendary/Mythic weights. This migration is
+     * intentionally exact so values outside the old shipped defaults are not
+     * silently overwritten.
+     */
+    private boolean migrateDefaultTierWeights() {
+        if (banners == null) return false;
+        boolean changed = false;
+        for (GachaBanner banner : banners) {
+            if (banner == null || banner.entries == null) continue;
+            for (GachaEntry entry : banner.entries) {
+                if (entry == null || entry.rarity == null) continue;
+                if (entry.rarity == GachaRarity.LEGENDARY
+                        && (sameWeight(entry.weight, 0.05) || sameWeight(entry.weight, 0.25))) {
+                    entry.weight = 0.88;
+                    changed = true;
+                } else if (entry.rarity == GachaRarity.MYTHIC && sameWeight(entry.weight, 0.05)) {
+                    entry.weight = 0.88;
+                    changed = true;
+                }
+            }
+        }
+        return changed;
+    }
+
+    private static boolean sameWeight(double value, double expected) {
+        return Double.isFinite(value) && Math.abs(value - expected) < 0.000001;
     }
 
     private static void preserveUnreadableConfig(Path path, Logger logger) {
@@ -400,9 +430,9 @@ public final class GachaConfig {
     private static GachaEntry common(String id, String name) { return new GachaEntry(id, name, GachaRarity.COMMON, 100.0); }
     private static GachaEntry rare(String id, String name) { return new GachaEntry(id, name, GachaRarity.RARE, 30.0); }
     private static GachaEntry epic(String id, String name) { return new GachaEntry(id, name, GachaRarity.EPIC, 8.0); }
-    private static GachaEntry legendary(String id, String name) { return new GachaEntry(id, name, GachaRarity.LEGENDARY, 0.25); }
+    private static GachaEntry legendary(String id, String name) { return new GachaEntry(id, name, GachaRarity.LEGENDARY, 0.88); }
     private static GachaEntry unmonumentedLegendary(String id, String name) {
-        return new GachaEntry(id, name, GachaRarity.LEGENDARY, 0.05);
+        return new GachaEntry(id, name, GachaRarity.LEGENDARY, 0.88);
     }
-    private static GachaEntry mythic(String id, String name) { return new GachaEntry(id, name, GachaRarity.MYTHIC, 0.05); }
+    private static GachaEntry mythic(String id, String name) { return new GachaEntry(id, name, GachaRarity.MYTHIC, 0.88); }
 }

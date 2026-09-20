@@ -42,6 +42,7 @@ then roll the extremely rare `legendaryPokemonChance` (0.1% by default).
 - A dedicated **Beyond the Monuments** pool containing Legendary and Mythical Pokémon not reserved for the Legendary Monuments route.
 - Exactly one region is active at a time; the active region rotates deterministically every real-world hour by default. Other regions can be previewed but cannot be drawn until their rotation window.
 - Weighted Common, Rare, Epic, Legendary, and Mythic entries.
+- Default regional Legendary and Mythic entries use a high-tier weight that resolves to roughly 0.1% per entry; older shipped 0.05/0.25 weights are migrated automatically.
 - Ten-pull guarantee: the tenth result is at least Rare if the first nine were not.
 - Independent Rare+ pity and Legendary pity counters, both configurable and carried through banner rotations.
 - Independent shiny chance for every result.
