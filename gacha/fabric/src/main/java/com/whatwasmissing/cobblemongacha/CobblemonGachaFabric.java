@@ -4,6 +4,7 @@ import com.whatwasmissing.cobblemongacha.commands.GachaCommands;
 import com.whatwasmissing.cobblemongacha.core.GachaService;
 import com.whatwasmissing.cobblemongacha.gui.GachaMenuTypes;
 import com.whatwasmissing.cobblemongacha.network.GachaMenuSyncPayload;
+import com.whatwasmissing.cobblemongacha.network.GachaPullResultPayload;
 import com.whatwasmissing.cobblemongacha.network.OpenGachaPayload;
 import com.whatwasmissing.cobblemongacha.network.UpgradeResultPayload;
 import net.fabricmc.api.ModInitializer;
@@ -31,6 +32,7 @@ public final class CobblemonGachaFabric implements ModInitializer {
         // send their authoritative banner/target snapshot after opening.
         PayloadTypeRegistry.playS2C().register(GachaMenuSyncPayload.TYPE, GachaMenuSyncPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(UpgradeResultPayload.TYPE, UpgradeResultPayload.CODEC);
+        PayloadTypeRegistry.playS2C().register(GachaPullResultPayload.TYPE, GachaPullResultPayload.CODEC);
         ServerPlayNetworking.registerGlobalReceiver(OpenGachaPayload.TYPE, (payload, context) ->
                 context.server().execute(() -> GachaService.openMenu(context.player())));
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) ->

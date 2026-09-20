@@ -6,6 +6,7 @@ import com.whatwasmissing.cobblemongacha.gui.GachaMenu;
 import com.whatwasmissing.cobblemongacha.gui.GachaMenuTypes;
 import com.whatwasmissing.cobblemongacha.gui.UpgradeMenu;
 import com.whatwasmissing.cobblemongacha.network.GachaMenuSyncPayload;
+import com.whatwasmissing.cobblemongacha.network.GachaPullResultPayload;
 import com.whatwasmissing.cobblemongacha.network.OpenGachaPayload;
 import com.whatwasmissing.cobblemongacha.network.UpgradeResultPayload;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -64,6 +65,13 @@ public final class CobblemonGachaNeoForge {
                     if (context.player() instanceof Player player
                             && player.containerMenu instanceof UpgradeMenu menu) {
                         menu.applyUpgradeResult(payload);
+                    }
+                }));
+        registrar.playToClient(GachaPullResultPayload.TYPE, GachaPullResultPayload.CODEC, (payload, context) ->
+                context.enqueueWork(() -> {
+                    if (context.player() instanceof Player player
+                            && player.containerMenu instanceof GachaMenu menu) {
+                        menu.applyPullResult(payload);
                     }
                 }));
     }

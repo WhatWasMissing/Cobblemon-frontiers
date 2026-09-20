@@ -7,6 +7,7 @@ import com.whatwasmissing.cobblemongacha.gui.GachaMenu;
 import com.whatwasmissing.cobblemongacha.gui.UpgradeScreen;
 import com.whatwasmissing.cobblemongacha.gui.UpgradeMenu;
 import com.whatwasmissing.cobblemongacha.network.OpenGachaPayload;
+import com.whatwasmissing.cobblemongacha.network.GachaPullResultPayload;
 import com.whatwasmissing.cobblemongacha.network.UpgradeResultPayload;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
@@ -38,6 +39,13 @@ public final class CobblemonGachaFabricClient implements ClientModInitializer {
                     if (context.client().player != null
                             && context.client().player.containerMenu instanceof UpgradeMenu menu) {
                         menu.applyUpgradeResult(payload);
+                    }
+                }));
+        ClientPlayNetworking.registerGlobalReceiver(GachaPullResultPayload.TYPE, (payload, context) ->
+                context.client().execute(() -> {
+                    if (context.client().player != null
+                            && context.client().player.containerMenu instanceof GachaMenu menu) {
+                        menu.applyPullResult(payload);
                     }
                 }));
         openGacha = KeyBindingHelper.registerKeyBinding(new KeyMapping(

@@ -32,11 +32,24 @@ public final class UpgradeScreen extends AbstractContainerScreen<UpgradeMenu> {
     private static final int ORANGE = 0xFFE47740;
     private static final int GREEN = 0xFF64C97B;
     private static final int RED = 0xFFE05E5E;
-    private long wheelSpinStarted;
-    private long wheelSpinUntil;
+    private static final double TWO_PI = Math.PI * 2.0;
+    private static final long WHEEL_MIN_SPIN_MS = 1_100L;
+    private static final long WHEEL_SETTLE_MS = 850L;
+    private static final long WHEEL_RESPONSE_TIMEOUT_MS = 8_000L;
+    private long wheelSpinStarted = -1L;
+    private long wheelSpinUntil = -1L;
+    private long wheelSettleStarted = -1L;
+    private long wheelSettleUntil = -1L;
+    private double wheelStartAngle;
+    private double wheelSettleFrom;
+    private double wheelSettleTo;
+    private double wheelChanceAtWager;
+    private boolean wheelPending;
+    private UpgradeResultPayload wheelResult;
     private long feedbackSequence = -1L;
     private long feedbackVisibleAt = -1L;
     private long feedbackUntil = -1L;
+    private long wheelErrorUntil = -1L;
     private UpgradeResultPayload feedback;
 
     public UpgradeScreen(UpgradeMenu menu, Inventory inventory, Component title) {
@@ -51,11 +64,20 @@ public final class UpgradeScreen extends AbstractContainerScreen<UpgradeMenu> {
         super.init();
         leftPos = 0;
         topPos = 0;
-        wheelSpinStarted = 0L;
-        wheelSpinUntil = 0L;
+        wheelSpinStarted = -1L;
+        wheelSpinUntil = -1L;
+        wheelSettleStarted = -1L;
+        wheelSettleUntil = -1L;
+        wheelStartAngle = 0.0;
+        wheelSettleFrom = 0.0;
+        wheelSettleTo = 0.0;
+        wheelChanceAtWager = 0.0;
+        wheelPending = false;
+        wheelResult = null;
         feedbackSequence = -1L;
         feedbackVisibleAt = -1L;
         feedbackUntil = -1L;
+        wheelErrorUntil = -1L;
         feedback = null;
     }
 
@@ -78,8 +100,9 @@ public final class UpgradeScreen extends AbstractContainerScreen<UpgradeMenu> {
         graphics.fill(4, 4, WIDTH - 4, HEIGHT - 4, 0xFF080D14);
         drawHeader(graphics);
         drawSourcePanel(graphics);
-        drawWheel(graphics);
         trackUpgradeFeedback();
+        expirePendingWheel();
+        drawWheel(graphics);
         drawRollFeedback(graphics);
         drawTargetPanel(graphics, designMouseX, designMouseY);
         drawActionBar(graphics, designMouseX, designMouseY);
@@ -115,28 +138,39 @@ public final class UpgradeScreen extends AbstractContainerScreen<UpgradeMenu> {
         graphics.fill(278, 78, 542, 342, PANEL_DARK);
         graphics.fill(288, 88, 532, 332, 0xFF202A3E);
         graphics.fill(306, 106, 514, 314, 0xFF0D121B);
-        // Pixel-friendly ring/ticks inspired by the reference wheel.
         long now = System.currentTimeMillis();
-        boolean spinning = wheelSpinUntil > now;
-        double markerAngle = -Math.PI / 2.0;
-        if (spinning) {
-            double progress = Math.min(1.0, Math.max(0.0, (now - wheelSpinStarted) / 900.0));
-            markerAngle += progress * Math.PI * 2.0 * 4.0;
+        double chance = wheelChance();
+        double wheelAngle = wheelAngle(now);
+        boolean spinning = wheelActive();
+
+        // The wheel is a probability display, not a decorative spinner: the
+        // green arc is the server-calculated success range and the red arc is
+        // the failure range. The fixed pointer makes the eventual outcome
+        // readable even while the wheel rotates beneath it.
+        for (int index = 0; index < 48; index++) {
+            double fraction = (double) index / 48.0;
+            double angle = -Math.PI / 2.0 + fraction * TWO_PI + wheelAngle;
+            int radius = index % 4 == 0 ? 123 : 118;
+            int x = centerX + (int) (Math.cos(angle) * radius);
+            int y = centerY + (int) (Math.sin(angle) * radius);
+            int colour = fraction < chance ? GREEN : RED;
+            int size = index % 4 == 0 ? 6 : 4;
+            graphics.fill(x - size / 2, y - size / 2, x + size / 2 + 1, y + size / 2 + 1,
+                    spinning && index % 4 != 0 ? tint(colour, 190) : colour);
         }
-        for (int index = 0; index < 32; index++) {
-            double angle = (Math.PI * 2.0 * index) / 32.0;
-            int x = centerX + (int) (Math.cos(angle) * 128.0);
-            int y = centerY + (int) (Math.sin(angle) * 128.0);
-            graphics.fill(x - 2, y - 7, x + 3, y + 7, index == 0 && !spinning ? GOLD : LINE);
-        }
-        int markerX = centerX + (int) (Math.cos(markerAngle) * 128.0);
-        int markerY = centerY + (int) (Math.sin(markerAngle) * 128.0);
-        graphics.fill(markerX - 5, markerY - 5, markerX + 6, markerY + 6, spinning ? GOLD : ORANGE);
-        graphics.fill(centerX - 2, 80, centerX + 2, 108, spinning ? LINE : GOLD);
-        double chance = GachaUpgradeService.chance(menu);
+        graphics.fill(centerX - 70, centerY - 70, centerX + 70, centerY + 70, 0xFF121A26);
+        graphics.fill(centerX - 64, centerY - 64, centerX + 64, centerY + 64, 0xFF1C2938);
+
+        int pointerColour = wheelResult == null ? GOLD : wheelResult.success() ? GREEN : RED;
+        graphics.fill(centerX - 10, 76, centerX + 10, 81, pointerColour);
+        graphics.fill(centerX - 7, 81, centerX + 7, 86, pointerColour);
+        graphics.fill(centerX - 4, 86, centerX + 4, 91, pointerColour);
+
         int chanceColour = chance >= 0.5 ? GREEN : chance > 0.0 ? ORANGE : MUTED;
         graphics.drawCenteredString(font, Component.literal(chance <= 0.0 ? "—" : percent(chance)), centerX, 188, chanceColour);
-        graphics.drawCenteredString(font, Component.literal("chance"), centerX, 222, MUTED);
+        graphics.drawCenteredString(font, Component.literal(wheelStatus()), centerX, 222,
+                spinning ? GOLD : wheelResult == null ? MUTED : pointerColour);
+        graphics.drawCenteredString(font, Component.literal("server-confirmed odds"), centerX, 238, MUTED);
     }
 
     private void trackUpgradeFeedback() {
@@ -145,25 +179,40 @@ public final class UpgradeScreen extends AbstractContainerScreen<UpgradeMenu> {
         feedbackSequence = sequence;
         feedback = menu.lastUpgradeResult();
         long now = System.currentTimeMillis();
-        // The click starts the wheel animation. A slow server response must
-        // not restart it, otherwise the marker appears to jump out of sync
-        // with the wager the player just made.
-        if (wheelSpinStarted <= 0L) {
-            wheelSpinStarted = now;
-            wheelSpinUntil = now + 900L;
-        }
-        feedbackVisibleAt = Math.max(now + 250L, wheelSpinUntil);
-        feedbackUntil = feedbackVisibleAt + 2400L;
+        if (!wheelPending) return;
+
+        wheelResult = feedback;
+        wheelChanceAtWager = clampChance(feedback.chance());
+        wheelPending = false;
+        wheelSettleStarted = Math.max(now, wheelSpinUntil);
+        wheelSettleFrom = spinAngleAt(wheelSettleStarted);
+        double target = targetWheelAngle(feedback.success(), clampChance(feedback.chance()));
+        double delta = positiveModulo(target - wheelSettleFrom, TWO_PI);
+        wheelSettleTo = wheelSettleFrom + TWO_PI * 1.15 + delta;
+        wheelSettleUntil = wheelSettleStarted + WHEEL_SETTLE_MS;
+        feedbackVisibleAt = wheelSettleUntil;
+        feedbackUntil = wheelSettleUntil + 2_400L;
     }
 
     private void drawRollFeedback(GuiGraphics graphics) {
         long now = System.currentTimeMillis();
-        if (feedback == null || now >= feedbackUntil) return;
-        if (now < feedbackVisibleAt) {
-            graphics.drawCenteredString(font, Component.literal("ROLLING…"), 410, 246, GOLD);
-            graphics.drawCenteredString(font, Component.literal("Your result is on the way…"), 410, 264, MUTED);
+        if (wheelPending || feedback != null && now < feedbackVisibleAt) {
+            graphics.fill(304, 164, 516, 278, 0xE20B111A);
+            graphics.fill(304, 164, 516, 168, GOLD);
+            graphics.drawCenteredString(font, Component.literal("ROLLING…"), 410, 184, GOLD);
+            graphics.drawCenteredString(font, Component.literal("Waiting for the server result"), 410, 211, MUTED);
+            graphics.drawCenteredString(font, Component.literal("Do not submit another wager"), 410, 232, MUTED);
             return;
         }
+        if (wheelErrorUntil > now) {
+            graphics.fill(304, 164, 516, 278, 0xE20B111A);
+            graphics.fill(304, 164, 516, 168, ORANGE);
+            graphics.drawCenteredString(font, Component.literal("NO RESPONSE"), 410, 184, ORANGE);
+            graphics.drawCenteredString(font, Component.literal("The wager was not confirmed"), 410, 211, MUTED);
+            graphics.drawCenteredString(font, Component.literal("Try again when ready"), 410, 232, MUTED);
+            return;
+        }
+        if (feedback == null || now >= feedbackUntil) return;
         int accent = feedback.success() ? GREEN : RED;
         graphics.fill(304, 164, 516, 278, 0xF20B111A);
         graphics.fill(304, 164, 516, 168, accent);
@@ -227,15 +276,24 @@ public final class UpgradeScreen extends AbstractContainerScreen<UpgradeMenu> {
 
     private void drawActionBar(GuiGraphics graphics, double mouseX, double mouseY) {
         long cooldown = menu.gamblingCooldownSeconds();
-        boolean ready = cooldown <= 0L;
+        boolean rolling = wheelActive();
+        boolean configured = wagerReady();
+        boolean ready = cooldown <= 0L && !rolling && configured;
         boolean upgradeHover = ready && isInside(mouseX, mouseY, 28, 404, 390, 58);
         boolean pokemonTarget = menu.selectedTarget() != null && menu.selectedTarget().pokemon();
-        graphics.fill(28, 404, 418, 462, ready ? (upgradeHover ? 0xFFE9BE4C : 0xFFD6A832) : 0xFF5B4650);
-        graphics.fill(32, 408, 414, 458, ready ? 0xFFB88821 : 0xFF403139);
-        graphics.drawCenteredString(font, Component.literal(ready ? "⚒  UPGRADE" : "WAGER LOCKED"), 223, 424,
-                ready ? 0xFF151515 : 0xFFF0B7B7);
-        graphics.drawCenteredString(font, Component.literal(ready ? "failure loses the source item" : "available in " + shortDuration(cooldown)),
-                223, 444, ready ? 0xFF2C2615 : 0xFFE2AEB0);
+        int actionColour = rolling ? 0xFF4C6573 : ready ? (upgradeHover ? 0xFFE9BE4C : 0xFFD6A832) : 0xFF5B4650;
+        int innerColour = rolling ? 0xFF31434F : ready ? 0xFFB88821 : 0xFF403139;
+        graphics.fill(28, 404, 418, 462, actionColour);
+        graphics.fill(32, 408, 414, 458, innerColour);
+        String actionLabel = rolling ? "ROLLING…" : ready ? "⚒  UPGRADE"
+                : cooldown > 0L ? "WAGER LOCKED" : "SET UP WAGER";
+        graphics.drawCenteredString(font, Component.literal(actionLabel), 223, 424,
+                rolling ? TEXT : ready ? 0xFF151515 : 0xFFF0B7B7);
+        String actionHint = rolling ? "waiting for server confirmation"
+                : ready ? "failure loses the source item"
+                : cooldown > 0L ? "available in " + shortDuration(cooldown) : wagerHint();
+        graphics.drawCenteredString(font, Component.literal(actionHint), 223, 444,
+                rolling ? MUTED : ready ? 0xFF2C2615 : 0xFFE2AEB0);
 
         for (int index = 0; index < 4; index++) {
             int x = 434 + index * 66;
@@ -364,9 +422,20 @@ public final class UpgradeScreen extends AbstractContainerScreen<UpgradeMenu> {
 
     private void clickUpgrade() {
         if (minecraft.gameMode == null || minecraft.player == null) return;
-        if (menu.gamblingCooldownSeconds() > 0L) return;
-        wheelSpinStarted = System.currentTimeMillis();
-        wheelSpinUntil = wheelSpinStarted + 900L;
+        if (menu.gamblingCooldownSeconds() > 0L || wheelActive() || !wagerReady()) return;
+        long now = System.currentTimeMillis();
+        wheelSpinStarted = now;
+        wheelSpinUntil = now + WHEEL_MIN_SPIN_MS;
+        wheelSettleStarted = -1L;
+        wheelSettleUntil = -1L;
+        wheelResult = null;
+        wheelPending = true;
+        wheelChanceAtWager = clampChance(GachaUpgradeService.chance(menu));
+        wheelStartAngle = positiveModulo((menu.upgradeResultSequence() + 1L) * 0.73, TWO_PI);
+        feedback = null;
+        feedbackVisibleAt = -1L;
+        feedbackUntil = -1L;
+        wheelErrorUntil = -1L;
         minecraft.gameMode.handleInventoryMouseClick(menu.containerId, UpgradeMenu.UPGRADE_SLOT, 0,
                 net.minecraft.world.inventory.ClickType.PICKUP, minecraft.player);
     }
@@ -377,6 +446,7 @@ public final class UpgradeScreen extends AbstractContainerScreen<UpgradeMenu> {
         float scale = uiScale();
         mouseX = toDesignX(mouseX, scale);
         mouseY = toDesignY(mouseY, scale);
+        if (wheelActive()) return true;
         if (isInside(mouseX, mouseY, 28, 14, 136, 28)) { clickOpenDraws(); return true; }
         if (isInside(mouseX, mouseY, 28, 404, 390, 58)) { clickUpgrade(); return true; }
         for (int index = 0; index < 4; index++) {
@@ -425,6 +495,7 @@ public final class UpgradeScreen extends AbstractContainerScreen<UpgradeMenu> {
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         if (keyCode == 256) { onClose(); return true; }
+        if (wheelActive()) return true;
         if (keyCode == 263 && menu.canGoPrevious()) { clickTargetPage(UpgradeMenu.BUTTON_PREVIOUS_TARGET_PAGE); return true; }
         if (keyCode == 262 && menu.canGoNext()) { clickTargetPage(UpgradeMenu.BUTTON_NEXT_TARGET_PAGE); return true; }
         return super.keyPressed(keyCode, scanCode, modifiers);
@@ -473,6 +544,90 @@ public final class UpgradeScreen extends AbstractContainerScreen<UpgradeMenu> {
     private double toDesignY(double screenY, float scale) { return (screenY - height / 2.0) / scale + HEIGHT / 2.0; }
     private static boolean isInside(double mouseX, double mouseY, int x, int y, int width, int height) {
         return mouseX >= x && mouseX < x + width && mouseY >= y && mouseY < y + height;
+    }
+
+    private double wheelChance() {
+        return wheelResult != null ? wheelChanceAtWager : clampChance(GachaUpgradeService.chance(menu));
+    }
+
+    private boolean wagerReady() {
+        ItemStack source = menu.sourceStack();
+        UpgradeTarget target = menu.selectedTarget();
+        if (source.isEmpty() || target == null) return false;
+        return !target.pokemon()
+                || target.rarity() != com.whatwasmissing.cobblemongacha.core.GachaRarity.LEGENDARY
+                || ItemValueService.value(source) >= menu.legendaryPokemonMinimumSourceValue();
+    }
+
+    private String wagerHint() {
+        if (menu.sourceStack().isEmpty()) return "choose a source item";
+        if (menu.selectedTarget() == null) return "choose a target";
+        return "source value is too low for this contract";
+    }
+
+    private double wheelAngle(long now) {
+        if (wheelSpinStarted < 0L) return 0.0;
+        if (wheelResult == null || wheelSettleStarted < 0L || now <= wheelSettleStarted) {
+            return spinAngleAt(now);
+        }
+        double progress = Math.max(0.0, Math.min(1.0,
+                (now - wheelSettleStarted) / (double) WHEEL_SETTLE_MS));
+        return wheelSettleFrom + (wheelSettleTo - wheelSettleFrom) * easeOut(progress);
+    }
+
+    private double spinAngleAt(long timestamp) {
+        double elapsed = Math.max(0.0, timestamp - wheelSpinStarted);
+        double acceleration = Math.min(1.0, elapsed / 280.0);
+        double ramp = acceleration * acceleration * (3.0 - 2.0 * acceleration);
+        double turns = 0.10 * ramp + Math.max(0.0, elapsed - 280.0) / 430.0;
+        return wheelStartAngle + turns * TWO_PI;
+    }
+
+    private double targetWheelAngle(boolean success, double chance) {
+        double successArc = chance * TWO_PI;
+        double localCenter = success
+                ? -Math.PI / 2.0 + successArc / 2.0
+                : -Math.PI / 2.0 + successArc + (TWO_PI - successArc) / 2.0;
+        return -Math.PI / 2.0 - localCenter;
+    }
+
+    private String wheelStatus() {
+        if (wheelPending) return "RESULT PENDING";
+        if (wheelErrorUntil > System.currentTimeMillis()) return "NO RESPONSE";
+        if (wheelResult == null) return "READY TO WAGER";
+        return wheelResult.success() ? "SUCCESS ZONE" : "FAILURE ZONE";
+    }
+
+    private void expirePendingWheel() {
+        if (!wheelPending || wheelSpinStarted < 0L) return;
+        long now = System.currentTimeMillis();
+        if (now - wheelSpinStarted < WHEEL_RESPONSE_TIMEOUT_MS) return;
+        wheelPending = false;
+        wheelResult = null;
+        wheelSettleStarted = -1L;
+        wheelSettleUntil = -1L;
+        feedback = null;
+        feedbackVisibleAt = -1L;
+        feedbackUntil = -1L;
+        wheelErrorUntil = now + 2_400L;
+    }
+
+    private boolean wheelActive() {
+        long now = System.currentTimeMillis();
+        return wheelPending || wheelResult != null && wheelSettleUntil > now;
+    }
+
+    private static double clampChance(double chance) {
+        return Double.isFinite(chance) ? Math.max(0.0, Math.min(1.0, chance)) : 0.0;
+    }
+
+    private static double easeOut(double progress) {
+        double inverse = 1.0 - progress;
+        return 1.0 - inverse * inverse * inverse;
+    }
+
+    private static double positiveModulo(double value, double modulus) {
+        return ((value % modulus) + modulus) % modulus;
     }
     private static String valueText(double value) { return value >= 1000 ? String.format(Locale.ROOT, "%.0fk", value / 1000.0) : String.format(Locale.ROOT, "%.0f", value); }
     private static String percent(double chance) {

@@ -5,9 +5,11 @@ import com.cobblemon.mod.common.api.events.CobblemonEvents;
 import com.whatwasmissing.cobblemongacha.config.GachaConfig;
 import com.whatwasmissing.cobblemongacha.gui.GachaMenu;
 import com.whatwasmissing.cobblemongacha.gui.UpgradeMenu;
+import com.whatwasmissing.cobblemongacha.network.GachaPullResultPayload;
 import kotlin.Unit;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.protocol.common.ClientboundCustomPayloadPacket;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.SimpleMenuProvider;
 
@@ -255,7 +257,18 @@ public final class GachaService {
         }
         startGamblingCooldown(player, false);
         announceResults(player, results, banner);
+        sendPullReveal(player, results);
         return new DrawSummary(results, true);
+    }
+
+    private static void sendPullReveal(ServerPlayer player, List<GachaResult> results) {
+        if (results == null || results.isEmpty()) return;
+        GachaResult highlight = results.stream()
+                .max(java.util.Comparator.comparingInt((GachaResult result) -> result.rarity().rank())
+                        .thenComparingInt(result -> result.shiny() ? 1 : 0))
+                .orElse(results.get(0));
+        player.connection.send(new ClientboundCustomPayloadPacket(new GachaPullResultPayload(
+                highlight.species(), highlight.label(), highlight.rarity().name(), highlight.shiny(), results.size())));
     }
 
     private static boolean hasWeightedEntry(GachaBanner banner, GachaRarity minimum) {

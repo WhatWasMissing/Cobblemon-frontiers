@@ -2,8 +2,8 @@ package com.whatwasmissing.cobblemongacha.gui;
 
 import com.whatwasmissing.cobblemongacha.core.GachaBanner;
 import com.whatwasmissing.cobblemongacha.core.GachaEntry;
-import com.whatwasmissing.cobblemongacha.core.GachaLedger;
 import com.whatwasmissing.cobblemongacha.core.GachaRarity;
+import com.whatwasmissing.cobblemongacha.network.GachaPullResultPayload;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
@@ -13,12 +13,9 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 
-import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 
 /** A compact Cobblemon-inspired presentation: cards, tabs, rarity chips, and no chest grid. */
 public final class GachaScreen extends AbstractContainerScreen<GachaMenu> {
@@ -32,7 +29,8 @@ public final class GachaScreen extends AbstractContainerScreen<GachaMenu> {
     private static final int TEXT = 0xFFF3F7F8;
     private static final int MUTED = 0xFFA9BBC4;
     private static final int GOLD = 0xFFF6CC72;
-    private static final long REVEAL_DURATION_MS = 2400L;
+    private static final double TWO_PI = Math.PI * 2.0;
+    private static final long REVEAL_DURATION_MS = 3_200L;
     private static final int FEATURED_PREVIOUS_X = 638;
     private static final int FEATURED_NEXT_X = 674;
     private static final int FEATURED_NAV_Y = 96;
@@ -42,13 +40,17 @@ public final class GachaScreen extends AbstractContainerScreen<GachaMenu> {
     private static final int CURRENT_BANNER_Y = 164;
     private static final int CURRENT_BANNER_WIDTH = 142;
     private static final int CURRENT_BANNER_HEIGHT = 18;
+    private static final long PULL_RESPONSE_TIMEOUT_MS = 6_000L;
 
-    private List<String> lastHistorySignatures = List.of();
-    private boolean historyBaselineReady;
+    private long pullResultSequence = -1L;
     private long revealStartedAt = -1L;
+    private String revealSpecies = "";
     private String revealLabel = "";
     private GachaRarity revealRarity = GachaRarity.COMMON;
     private boolean revealShiny;
+    private int revealCount = 1;
+    private boolean pullPending;
+    private long pullPendingUntil = -1L;
     private boolean closing;
 
     public GachaScreen(GachaMenu menu, Inventory inventory, Component title) {
@@ -63,8 +65,9 @@ public final class GachaScreen extends AbstractContainerScreen<GachaMenu> {
         super.init();
         leftPos = 0;
         topPos = 0;
-        lastHistorySignatures = historySignatures();
-        historyBaselineReady = false;
+        pullResultSequence = menu.pullResultSequence();
+        pullPending = false;
+        pullPendingUntil = -1L;
         closing = false;
     }
 
@@ -78,6 +81,7 @@ public final class GachaScreen extends AbstractContainerScreen<GachaMenu> {
         // interactive-looking layer visible through the gacha screen.
         graphics.fill(0, 0, width, height, 0xF20A1018);
         trackPullReveal();
+        expirePullPending();
         float scale = uiScale();
         double designMouseX = toDesignX(mouseX, scale);
         double designMouseY = toDesignY(mouseY, scale);
@@ -137,12 +141,14 @@ public final class GachaScreen extends AbstractContainerScreen<GachaMenu> {
 
         drawCurrentBannerButton(graphics, mouseX, mouseY, theme);
         long cooldown = menu.gamblingCooldownSeconds();
-        boolean drawReady = active && cooldown <= 0L;
+        boolean drawReady = active && cooldown <= 0L && !pullPending && !revealActive();
         drawButton(graphics, 510, 184, 105, 40, "DRAW 1", menu.getSlot(GachaMenu.DRAW_ONE_SLOT).getItem(),
                 drawReady, mouseX, mouseY, theme.accent);
         drawButton(graphics, 627, 184, 105, 40, "DRAW 10", menu.getSlot(GachaMenu.DRAW_TEN_SLOT).getItem(),
                 drawReady, mouseX, mouseY, theme.bright);
-        if (cooldown > 0L) {
+        if (pullPending) {
+            graphics.drawString(font, Component.literal("Submitting draw…"), 220, 192, GOLD);
+        } else if (cooldown > 0L) {
             graphics.drawString(font, Component.literal("Ready in " + shortDuration(cooldown)), 220, 192, GOLD);
         }
         drawUpgraderButton(graphics, mouseX, mouseY);
@@ -205,59 +211,19 @@ public final class GachaScreen extends AbstractContainerScreen<GachaMenu> {
     }
 
     private void trackPullReveal() {
-        List<String> current = historySignatures();
-        // The initial container contents arrive before or alongside the custom
-        // server snapshot. Establish that state as the baseline so an old
-        // legendary pull is not replayed as a new reveal when the screen opens.
-        if (!historyBaselineReady) {
-            lastHistorySignatures = current;
-            historyBaselineReady = menu.hasServerSnapshot();
-            return;
-        }
-        if (!lastHistorySignatures.isEmpty() && !current.equals(lastHistorySignatures)) {
-            Map<String, Integer> oldCounts = new HashMap<>();
-            for (String signature : lastHistorySignatures) {
-                oldCounts.merge(signature, 1, Integer::sum);
-            }
-            ItemStack bestStack = ItemStack.EMPTY;
-            GachaRarity bestRarity = GachaRarity.COMMON;
-            boolean bestShiny = false;
-            for (int index = 0; index < current.size(); index++) {
-                String signature = current.get(index);
-                int oldCount = oldCounts.getOrDefault(signature, 0);
-                if (oldCount > 0) {
-                    oldCounts.put(signature, oldCount - 1);
-                    continue;
-                }
-                ItemStack stack = menu.getSlot(GachaMenu.HISTORY_START + index).getItem();
-                if (stack.isEmpty() || isPane(stack)) continue;
-                String label = stack.getHoverName().getString();
-                GachaRarity rarity = historyRarity(stack);
-                boolean shiny = isShinyLabel(label);
-                if (bestStack.isEmpty() || rarity.rank() > bestRarity.rank()
-                        || (rarity == bestRarity && shiny && !bestShiny)) {
-                    bestStack = stack;
-                    bestRarity = rarity;
-                    bestShiny = shiny;
-                }
-            }
-            if (!bestStack.isEmpty() && (bestRarity.atLeast(GachaRarity.LEGENDARY) || bestShiny)) {
-                revealLabel = bestStack.getHoverName().getString();
-                revealRarity = bestRarity;
-                revealShiny = bestShiny;
-                revealStartedAt = System.currentTimeMillis();
-            }
-        }
-        lastHistorySignatures = current;
-    }
-
-    private List<String> historySignatures() {
-        List<String> signatures = new ArrayList<>(8);
-        for (int index = 0; index < 8; index++) {
-            ItemStack stack = menu.getSlot(GachaMenu.HISTORY_START + index).getItem();
-            signatures.add(stack.isEmpty() ? "" : stack.getHoverName().getString() + "|" + stack.getItem());
-        }
-        return signatures;
+        long sequence = menu.pullResultSequence();
+        if (sequence == pullResultSequence) return;
+        pullResultSequence = sequence;
+        pullPending = false;
+        pullPendingUntil = -1L;
+        GachaPullResultPayload payload = menu.lastPullResult();
+        if (payload == null) return;
+        revealSpecies = payload.species();
+        revealLabel = payload.label() == null || payload.label().isBlank() ? payload.species() : payload.label();
+        revealRarity = parseRarity(payload.rarity());
+        revealShiny = payload.shiny();
+        revealCount = Math.max(1, payload.resultCount());
+        revealStartedAt = System.currentTimeMillis();
     }
 
     private void renderPullReveal(GuiGraphics graphics) {
@@ -269,148 +235,65 @@ public final class GachaScreen extends AbstractContainerScreen<GachaMenu> {
         }
 
         float progress = Math.max(0.0f, Math.min(1.0f, elapsed / (float) REVEAL_DURATION_MS));
-        float eased = 1.0f - (float) Math.pow(1.0f - progress, 3.0f);
+        float revealProgress = easeOut(Math.max(0.0f, Math.min(1.0f, (progress - 0.24f) / 0.46f)));
         GachaBanner banner = menu.displayBanner(menu.bannerIndex());
         BannerTheme theme = theme(banner);
-        graphics.fill(24, 82, 736, 224, 0xC8081018);
-        graphics.fill(210, 88, 550, 220, theme.surface);
-        graphics.fill(210, 88, 550, 91, theme.accent);
-        drawRevealMotif(graphics, banner.id, theme, progress);
+        graphics.fill(12, 68, 748, 432, 0xE6081018);
+        graphics.fill(112, 76, 648, 428, theme.surface);
+        graphics.fill(112, 76, 648, 80, theme.accent);
+        graphics.fill(112, 424, 648, 428, theme.accent);
+        drawRevealMotif(graphics, theme, progress);
 
-        String heading = revealShiny ? "SHINY DISCOVERY"
-                : revealRarity == GachaRarity.MYTHIC ? "MYTHIC ARRIVAL" : "LEGENDARY ARRIVAL";
-        graphics.drawCenteredString(font, Component.literal(heading), 380, 97, theme.bright);
-        int spriteSize = Math.max(18, (int) (18 + eased * 68));
+        String heading = revealCount > 1 ? "TEN-PULL HIGHLIGHT"
+                : revealShiny ? "SHINY DISCOVERY"
+                : revealRarity == GachaRarity.MYTHIC ? "MYTHIC ARRIVAL"
+                : revealRarity == GachaRarity.LEGENDARY ? "LEGENDARY ARRIVAL" : "RARE FIND";
+        graphics.drawCenteredString(font, Component.literal(heading), 380, 94, theme.bright);
+        String phase = revealProgress < 0.92f ? "SIGNAL SEALED" : "REVEAL CONFIRMED";
+        graphics.drawCenteredString(font, Component.literal(phase), 380, 113, MUTED);
+
+        int spriteSize = Math.max(24, (int) (24 + revealProgress * 92.0f));
         int spriteX = 380 - spriteSize / 2;
-        int spriteY = 105 + (int) ((1.0f - eased) * 12.0f);
-        if (!PokemonSpriteRenderer.render(graphics, revealLabel, revealShiny, spriteX, spriteY, spriteSize)) {
-            graphics.renderItem(new ItemStack(theme.icon), 372, 128);
+        int spriteY = 142 + (int) ((1.0f - revealProgress) * 18.0f);
+        if (!PokemonSpriteRenderer.render(graphics, revealSpecies, revealShiny, spriteX, spriteY, spriteSize)) {
+            graphics.renderItem(new ItemStack(theme.icon), 372, 202);
         }
-        graphics.drawCenteredString(font, Component.literal(shorten(revealLabel, 28)), 380, 185, TEXT);
+        if (revealProgress < 0.92f) {
+            graphics.fill(292, 132, 468, 292, 0xE30A111A);
+            int scanY = 146 + (int) ((elapsed / 6L) % 136L);
+            graphics.fill(286, scanY, 474, scanY + 3, tint(theme.bright, 170));
+            graphics.drawCenteredString(font, Component.literal("LOCKING ON"), 380, 215, theme.bright);
+        } else {
+            float flash = Math.max(0.0f, 1.0f - Math.abs(revealProgress - 0.92f) / 0.08f);
+            if (flash > 0.0f) graphics.fill(146, 120, 614, 324, tint(theme.bright, (int) (flash * 90.0f)));
+        }
+        graphics.drawCenteredString(font, Component.literal(shorten(revealLabel, 28)), 380, 318, TEXT);
+        graphics.drawCenteredString(font, Component.literal((revealShiny ? "SHINY · " : "")
+                        + revealRarity.displayName()), 380, 338, rarityColor(revealRarity));
+        graphics.drawCenteredString(font, Component.literal(revealCount > 1
+                        ? "Best result from " + revealCount + " server-confirmed pulls" : "Server-confirmed reward"),
+                380, 366, MUTED);
+        graphics.drawCenteredString(font, Component.literal("Reward synced · controls return after reveal"),
+                380, 398, MUTED);
     }
 
-    private static void drawRevealMotif(GuiGraphics graphics, String bannerId, BannerTheme theme, float progress) {
-        int color = tint(theme.bright, (int) (70 + 110 * (1.0f - progress)));
+    private static void drawRevealMotif(GuiGraphics graphics, BannerTheme theme, float progress) {
         int centerX = 380;
-        int centerY = 145;
-        int pulse = (int) (progress * 34.0f);
-        switch (bannerId == null ? "" : bannerId) {
-            case "verdant" -> {
-                for (int index = 0; index < 6; index++) {
-                    int x = 250 + index * 52;
-                    int y = 116 + (index % 2) * 30 - (int) (progress * 20.0f);
-                    graphics.fill(x, y, x + 8, y + 14, color);
-                    graphics.fill(x + 4, y - 4, x + 12, y + 6, color);
-                }
-            }
-            case "ember" -> {
-                for (int index = 0; index < 8; index++) {
-                    int x = 250 + index * 36;
-                    int y = 184 - (int) (progress * (18 + index * 4)) % 68;
-                    graphics.fill(x, y, x + 4, y + 7, color);
-                }
-            }
-            case "tidal" -> {
-                for (int ring = 0; ring < 3; ring++) {
-                    int radius = 50 + ring * 32 + pulse;
-                    graphics.fill(centerX - radius, centerY + ring * 8, centerX + radius, centerY + ring * 8 + 2, color);
-                }
-            }
-            case "voltage" -> {
-                for (int step = 0; step < 6; step++) {
-                    int x = 250 + step * 28;
-                    int y = 118 + ((step + (int) (progress * 4)) % 2) * 36;
-                    graphics.fill(x, y, x + 18, y + 2, color);
-                    graphics.fill(x + 16, y, x + 18, y + 20, color);
-                }
-            }
-            case "stone" -> {
-                drawSquareRing(graphics, centerX, centerY, 38 + pulse, color);
-                drawSquareRing(graphics, centerX, centerY, 70 + pulse, tint(color, 80));
-            }
-            case "night" -> {
-                drawSpark(graphics, 270, 115, color, 7);
-                drawSpark(graphics, 490, 115, color, 5);
-                drawSpark(graphics, 270, 177, color, 4);
-                drawSpark(graphics, 490, 177, color, 8);
-            }
-            case "dragon" -> {
-                for (int wing = 0; wing < 4; wing++) {
-                    graphics.fill(252 + wing * 16, 120 + wing * 8, 282 + wing * 16, 122 + wing * 8, color);
-                    graphics.fill(478 - wing * 16, 120 + wing * 8, 508 - wing * 16, 122 + wing * 8, color);
-                }
-            }
-            case "frost" -> {
-                drawSpark(graphics, 270, 145, color, 15);
-                drawSpark(graphics, 490, 145, color, 15);
-                drawSpark(graphics, centerX, 105, color, 9);
-            }
-            case "battle" -> {
-                graphics.fill(250, centerY, 330, centerY + 3, color);
-                graphics.fill(430, centerY, 510, centerY + 3, color);
-                graphics.fill(centerX, 102, centerX + 3, 132, color);
-                graphics.fill(centerX, 158, centerX + 3, 188, color);
-            }
-            case "fossil" -> {
-                drawSquareRing(graphics, centerX, centerY, 66 + pulse, color);
-                graphics.fill(270, 111, 278, 179, color);
-                graphics.fill(482, 111, 490, 179, color);
-            }
-            case "eon" -> {
-                drawSquareRing(graphics, centerX, centerY, 50 + pulse, color);
-                graphics.fill(264, 145, 496, 147, tint(color, 100));
-                graphics.fill(378, 101, 380, 189, tint(color, 100));
-            }
-            case "sky" -> {
-                for (int line = 0; line < 5; line++) {
-                    int y = 111 + line * 17;
-                    graphics.fill(250 + line * 8, y, 320 + line * 18, y + 2, color);
-                    graphics.fill(440 - line * 8, y, 510 - line * 18, y + 2, color);
-                }
-            }
-            case "canopy" -> {
-                for (int index = 0; index < 5; index++) {
-                    int x = 260 + index * 30;
-                    graphics.fill(x, 108 + (index % 2) * 46, x + 14, 120 + (index % 2) * 46, color);
-                    graphics.fill(x + 5, 116 + (index % 2) * 46, x + 9, 137 + (index % 2) * 46, color);
-                }
-            }
-            case "urban" -> {
-                for (int index = 0; index < 4; index++) {
-                    int x = 245 + index * 58;
-                    graphics.fill(x, 112, x + 24, 114, color);
-                    graphics.fill(x + 22, 112, x + 24, 178, color);
-                    graphics.fill(x + 22, 176, x + 43, 178, color);
-                }
-            }
-            case "fairy" -> {
-                drawSpark(graphics, 264, 120, color, 6);
-                drawSpark(graphics, 496, 120, color, 6);
-                drawSpark(graphics, 264, 170, color, 4);
-                drawSpark(graphics, 496, 170, color, 4);
-                drawSpark(graphics, centerX, 108, color, 4);
-            }
-            case "shadow" -> {
-                drawSquareRing(graphics, centerX, centerY, 44 + pulse, tint(theme.accent, 130));
-                drawSquareRing(graphics, centerX, centerY, 78 + pulse, tint(theme.accent, 75));
-            }
-            case "frontier" -> {
-                drawSpark(graphics, 260, 112, color, 5);
-                drawSpark(graphics, 500, 112, color, 5);
-                drawSpark(graphics, 260, 178, color, 4);
-                drawSpark(graphics, 500, 178, color, 7);
-                drawSpark(graphics, 310, 104, color, 3);
-                drawSpark(graphics, 450, 186, color, 3);
-            }
-            case "beyond_monuments" -> {
-                graphics.fill(258, 120, 274, 182, color);
-                graphics.fill(486, 120, 502, 182, color);
-                graphics.fill(250, 118, 282, 122, color);
-                graphics.fill(478, 118, 510, 122, color);
-                drawSquareRing(graphics, centerX, centerY, 42 + pulse, color);
-            }
-            default -> drawSpark(graphics, centerX, centerY, color, 18 + pulse / 2);
+        int centerY = 236;
+        int pulse = (int) (Math.sin(progress * Math.PI * 8.0) * 8.0);
+        int orbitColour = tint(theme.bright, (int) (80 + 100 * (1.0f - progress)));
+        drawSquareRing(graphics, centerX, centerY, 74 + pulse, tint(theme.accent, 100));
+        drawSquareRing(graphics, centerX, centerY, 112 - pulse, tint(theme.bright, 55));
+        for (int index = 0; index < 16; index++) {
+            double angle = progress * Math.PI * 4.0 + index * TWO_PI / 16.0;
+            int radius = index % 2 == 0 ? 105 : 82;
+            int x = centerX + (int) (Math.cos(angle) * radius);
+            int y = centerY + (int) (Math.sin(angle) * radius);
+            graphics.fill(x - 3, y - 3, x + 4, y + 4, orbitColour);
         }
+        drawSpark(graphics, centerX, centerY, tint(theme.bright, 90 + pulse), 24 + Math.max(0, pulse));
+        graphics.fill(154, 388, 606, 390, tint(theme.accent, 90));
+        graphics.fill(206, 388, 554, 390, tint(theme.bright, 120));
     }
 
     private static void drawSpark(GuiGraphics graphics, int x, int y, int color, int radius) {
@@ -598,6 +481,7 @@ public final class GachaScreen extends AbstractContainerScreen<GachaMenu> {
             return true;
         }
         if (revealActive()) return true;
+        if (pullPending) return true;
         if (isInside(mouseX, mouseY, 24, 184, 180, 40)) { clickMenuButton(GachaMenu.BUTTON_OPEN_UPGRADER); return true; }
         if (isInside(mouseX, mouseY, CURRENT_BANNER_X, CURRENT_BANNER_Y,
                 CURRENT_BANNER_WIDTH, CURRENT_BANNER_HEIGHT) && !menu.isActiveBanner()) {
@@ -637,6 +521,12 @@ public final class GachaScreen extends AbstractContainerScreen<GachaMenu> {
     private void clickMenuSlot(int slot) {
         Player player = minecraft.player;
         if (minecraft.gameMode != null && player != null) {
+            if (slot == GachaMenu.DRAW_ONE_SLOT || slot == GachaMenu.DRAW_TEN_SLOT) {
+                if (!menu.isActiveBanner() || menu.gamblingCooldownSeconds() > 0L
+                        || pullPending || revealActive()) return;
+                pullPending = true;
+                pullPendingUntil = System.currentTimeMillis() + PULL_RESPONSE_TIMEOUT_MS;
+            }
             minecraft.gameMode.handleInventoryMouseClick(menu.containerId, slot, 0,
                     net.minecraft.world.inventory.ClickType.PICKUP, player);
         }
@@ -660,6 +550,7 @@ public final class GachaScreen extends AbstractContainerScreen<GachaMenu> {
         if (closing) return true;
         if (keyCode == 256) { closing = true; onClose(); return true; }
         if (revealActive()) return true;
+        if (pullPending) return true;
         if (keyCode == 263 && menu.canGoPrevious()) { clickBannerButton(GachaMenu.BUTTON_PREVIOUS_BANNER); return true; }
         if (keyCode == 262 && menu.canGoNext()) { clickBannerButton(GachaMenu.BUTTON_NEXT_BANNER); return true; }
         return super.keyPressed(keyCode, scanCode, modifiers);
@@ -677,12 +568,20 @@ public final class GachaScreen extends AbstractContainerScreen<GachaMenu> {
                 && System.currentTimeMillis() - revealStartedAt < REVEAL_DURATION_MS;
     }
 
-    private static GachaRarity historyRarity(ItemStack stack) {
-        if (stack.is(Items.NETHER_STAR)) return GachaRarity.MYTHIC;
-        if (stack.is(Items.DIAMOND)) return GachaRarity.LEGENDARY;
-        if (stack.is(Items.AMETHYST_SHARD)) return GachaRarity.EPIC;
-        if (stack.is(Items.EMERALD)) return GachaRarity.RARE;
-        return GachaRarity.COMMON;
+    private void expirePullPending() {
+        if (pullPending && System.currentTimeMillis() >= pullPendingUntil) {
+            pullPending = false;
+            pullPendingUntil = -1L;
+        }
+    }
+
+    private static GachaRarity parseRarity(String value) {
+        if (value == null || value.isBlank()) return GachaRarity.COMMON;
+        try {
+            return GachaRarity.valueOf(value.toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException ignored) {
+            return GachaRarity.COMMON;
+        }
     }
 
     private static boolean isShinyLabel(String label) {
@@ -697,6 +596,11 @@ public final class GachaScreen extends AbstractContainerScreen<GachaMenu> {
             case LEGENDARY -> 0xFFF0C26E;
             case MYTHIC -> 0xFFF29BD5;
         };
+    }
+
+    private static float easeOut(float progress) {
+        float inverse = 1.0f - progress;
+        return 1.0f - inverse * inverse * inverse;
     }
 
     private static boolean isInside(double mouseX, double mouseY, int x, int y, int width, int height) {

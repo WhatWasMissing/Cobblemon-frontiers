@@ -6,6 +6,7 @@ import com.whatwasmissing.cobblemongacha.core.GachaRarity;
 import com.whatwasmissing.cobblemongacha.core.GachaService;
 import com.whatwasmissing.cobblemongacha.config.GachaConfig;
 import com.whatwasmissing.cobblemongacha.network.GachaMenuSyncPayload;
+import com.whatwasmissing.cobblemongacha.network.GachaPullResultPayload;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
@@ -60,6 +61,8 @@ public final class GachaMenu extends ChestMenu {
     private int syncedLegendaryPityDraws = 100;
     private int syncedLegendaryPity;
     private double syncedShinyChance = 0.01;
+    private long pullResultSequence;
+    private GachaPullResultPayload lastPullResult;
 
     public GachaMenu(int containerId, Inventory playerInventory) {
         this(containerId, playerInventory, new SimpleContainer(SIZE));
@@ -139,6 +142,13 @@ public final class GachaMenu extends ChestMenu {
 
     public int bannerIndex() { return bannerIndex; }
     public boolean hasServerSnapshot() { return serverSnapshot; }
+    public long pullResultSequence() { return pullResultSequence; }
+    public GachaPullResultPayload lastPullResult() { return lastPullResult; }
+    public void applyPullResult(GachaPullResultPayload payload) {
+        if (payload == null) return;
+        lastPullResult = payload;
+        pullResultSequence++;
+    }
     public GachaBanner displayBanner(int index) {
         List<GachaBanner> banners = displayBanners();
         if (banners.isEmpty()) {

@@ -7,6 +7,7 @@ test -f "$root/settings.gradle.kts"
 test -f "$root/common/src/main/java/com/whatwasmissing/cobblemongacha/core/GachaService.java"
 test -f "$root/common/src/main/java/com/whatwasmissing/cobblemongacha/core/GachaUpgradeService.java"
 test -f "$root/common/src/main/java/com/whatwasmissing/cobblemongacha/gui/UpgradeScreen.java"
+test -f "$root/common/src/main/java/com/whatwasmissing/cobblemongacha/network/GachaPullResultPayload.java"
 test -f "$root/neoforge/src/main/resources/META-INF/neoforge.mods.toml"
 test -f "$root/fabric/src/main/resources/fabric.mod.json"
 
@@ -30,7 +31,20 @@ rg -q 'drawFeaturedLineup|featuredEntries|themedCard' "$root/common/src/main/jav
 rg -q 'BUTTON_CURRENT_BANNER|CURRENT_BANNER' "$root/common/src/main/java/com/whatwasmissing/cobblemongacha/gui/GachaMenu.java" "$root/common/src/main/java/com/whatwasmissing/cobblemongacha/gui/GachaScreen.java"
 rg -q 'captureProgress|capturesUntilNextTicket|Next ticket' "$root/common/src/main/java/com/whatwasmissing/cobblemongacha/gui/GachaMenu.java" "$root/common/src/main/java/com/whatwasmissing/cobblemongacha/gui/GachaScreen.java"
 rg -q 'PokemonSpriteRenderer|renderPullReveal|REVEAL_DURATION_MS' "$root/common/src/main/java/com/whatwasmissing/cobblemongacha/gui/GachaScreen.java"
-rg -q 'historyRarity|isShinyLabel' "$root/common/src/main/java/com/whatwasmissing/cobblemongacha/gui/GachaScreen.java"
+rg -q 'GachaPullResultPayload|pullResultSequence|parseRarity' "$root/common/src/main/java/com/whatwasmissing/cobblemongacha/gui/GachaScreen.java" "$root/common/src/main/java/com/whatwasmissing/cobblemongacha/gui/GachaMenu.java"
+rg -q 'PULL_RESPONSE_TIMEOUT_MS|pullPending|Submitting draw' "$root/common/src/main/java/com/whatwasmissing/cobblemongacha/gui/GachaScreen.java"
+if rg -q 'HashMap|oldCounts|historySignatures|historyBaselineReady|historyRarity' \
+    "$root/common/src/main/java/com/whatwasmissing/cobblemongacha/gui/GachaScreen.java"; then
+  echo "Gacha reveal still infers results from history presentation" >&2
+  exit 1
+fi
+rg -q 'isShinyLabel' "$root/common/src/main/java/com/whatwasmissing/cobblemongacha/gui/GachaScreen.java"
+rg -q 'GachaPullResultPayload|pull_result|sendPullReveal' "$root/common/src/main/java/com/whatwasmissing/cobblemongacha/core/GachaService.java" \
+    "$root/fabric/src/main/java/com/whatwasmissing/cobblemongacha/CobblemonGachaFabric.java" \
+    "$root/fabric/src/main/java/com/whatwasmissing/cobblemongacha/CobblemonGachaFabricClient.java" \
+    "$root/neoforge/src/main/java/com/whatwasmissing/cobblemongacha/CobblemonGachaNeoForge.java"
+rg -q 'WHEEL_MIN_SPIN_MS|targetWheelAngle|wheelPending|server-confirmed odds' \
+    "$root/common/src/main/java/com/whatwasmissing/cobblemongacha/gui/UpgradeScreen.java"
 rg -q 'GuiUtilsKt|PokemonSpecies|FloatingState|drawProfile' "$root/common/src/main/java/com/whatwasmissing/cobblemongacha/gui/PokemonSpriteRenderer.java"
 rg -q 'historyIcon' "$root/common/src/main/java/com/whatwasmissing/cobblemongacha/gui/GachaMenu.java"
 for banner_id in kanto johto hoenn sinnoh unova kalos alola galar hisui paldea; do
@@ -89,7 +103,11 @@ fi
 rg -q 'Double\.isFinite' "$root/common/src/main/java/com/whatwasmissing/cobblemongacha/core/GachaService.java"
 rg -q 'Double\.isFinite' "$root/common/src/main/java/com/whatwasmissing/cobblemongacha/core/ItemValueService.java"
 rg -q 'preserveUnreadableLedger|Keeping the file untouched|Objects::isNull' "$root/common/src/main/java/com/whatwasmissing/cobblemongacha/core/GachaLedger.java"
-rg -q 'HashMap|oldCounts|historySignatures|historyBaselineReady|hasServerSnapshot' "$root/common/src/main/java/com/whatwasmissing/cobblemongacha/gui/GachaScreen.java"
+if rg -q 'HashMap|oldCounts|historySignatures|historyBaselineReady|hasServerSnapshot' \
+    "$root/common/src/main/java/com/whatwasmissing/cobblemongacha/gui/GachaScreen.java"; then
+  echo "Gacha reveal still depends on the client history baseline" >&2
+  exit 1
+fi
 rg -q 'drawProfile\(species\.getResourceIdentifier' "$root/common/src/main/java/com/whatwasmissing/cobblemongacha/gui/PokemonSpriteRenderer.java"
 
 banner_count="$(rg -c 'banners\.add\(banner\(' "$root/common/src/main/java/com/whatwasmissing/cobblemongacha/config/GachaConfig.java")"
