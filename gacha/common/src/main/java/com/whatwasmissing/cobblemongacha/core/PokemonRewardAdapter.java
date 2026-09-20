@@ -10,10 +10,9 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.item.component.CustomData;
 
 import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-import java.util.UUID;
+import java.util.Locale;
 
 /**
  * Isolates the version-sensitive Cobblemon species/storage calls. The rest of
@@ -123,33 +122,81 @@ public final class PokemonRewardAdapter {
 
     private static Object findSpecies(String speciesId) throws ReflectiveOperationException {
         Class<?> registry = Class.forName(SPECIES_REGISTRY);
-        String name = speciesId == null ? "" : speciesId;
-        String namespace = "cobblemon";
-        if (name.contains(":")) {
-            int separator = name.indexOf(':');
-            namespace = name.substring(0, separator);
-            name = name.substring(separator + 1);
-        }
+        Object registryInstance = singletonInstance(registry);
+        String identifier = normaliseIdentifier(speciesId);
+        Object resourceLocation = resourceLocation(identifier);
 
-        for (Method method : registry.getMethods()) {
-            if (!Modifier.isStatic(method.getModifiers()) || !method.getName().equals("getByName")) continue;
-            Class<?>[] parameters = method.getParameterTypes();
-            if (parameters.length == 1 && parameters[0] == String.class) {
-                Object value = method.invoke(null, name);
-                if (value != null) return value;
-            }
-            if (parameters.length == 2 && parameters[0] == String.class && parameters[1] == String.class) {
-                Object value = method.invoke(null, name, namespace);
-                if (value != null) return value;
-            }
-        }
+        // PokemonSpecies is a Kotlin object in Cobblemon, so its registry
+        // methods are instance methods from Java. The old adapter only looked
+        // for static getByName methods, which made every valid reward fall back
+        // to a voucher even when party/PC storage was available.
+        Object value = invokeRegistry(registry, registryInstance, "getByIdentifier", new Object[]{resourceLocation});
+        if (value != null) return value;
+
+        String name = identifier.substring(identifier.indexOf(':') + 1);
+        value = invokeRegistry(registry, registryInstance, "getByName", new Object[]{name});
+        if (value != null) return value;
+
+        // Keep compatibility with older Cobblemon builds that exposed a
+        // namespaced getByName overload instead of getByIdentifier.
+        String namespace = identifier.substring(0, identifier.indexOf(':'));
+        value = invokeRegistry(registry, registryInstance, "getByName", new Object[]{name, namespace});
+        if (value != null) return value;
         return null;
     }
 
     private static Object createPokemon(Object species) throws ReflectiveOperationException {
         for (Method method : species.getClass().getMethods()) {
-            if (!method.getName().equals("create") || method.getParameterCount() != 0) continue;
-            return method.invoke(species);
+            if (!method.getName().equals("create")) continue;
+            if (method.getParameterCount() == 0) return method.invoke(species);
+            // Kotlin's default argument is not emitted as a Java no-arg
+            // overload unless @JvmOverloads is present. Cobblemon 1.8.x
+            // exposes create(int), whose normal default is level 10.
+            if (method.getParameterCount() == 1
+                    && (method.getParameterTypes()[0] == int.class
+                    || method.getParameterTypes()[0] == Integer.class)) {
+                return method.invoke(species, 10);
+            }
+        }
+        return null;
+    }
+
+    private static Object singletonInstance(Class<?> type) throws ReflectiveOperationException {
+        try {
+            Field field = type.getField("INSTANCE");
+            return field.get(null);
+        } catch (NoSuchFieldException exception) {
+            // A Java-facing build may expose registry methods statically.
+            return null;
+        }
+    }
+
+    private static String normaliseIdentifier(String speciesId) {
+        String value = speciesId == null ? "" : speciesId.trim().toLowerCase(Locale.ROOT);
+        return value.contains(":") ? value : "cobblemon:" + value;
+    }
+
+    private static Object resourceLocation(String identifier) throws ReflectiveOperationException {
+        Class<?> resourceLocation = Class.forName("net.minecraft.resources.ResourceLocation");
+        Method parse = resourceLocation.getMethod("parse", String.class);
+        return parse.invoke(null, identifier);
+    }
+
+    private static Object invokeRegistry(Class<?> registry, Object instance, String name, Object[] arguments)
+            throws ReflectiveOperationException {
+        if (instance != null) return invokeCompatible(instance, name, arguments);
+        for (Method method : registry.getMethods()) {
+            if (!Modifier.isStatic(method.getModifiers()) || !method.getName().equals(name)
+                    || method.getParameterCount() != arguments.length) continue;
+            Class<?>[] parameters = method.getParameterTypes();
+            boolean compatible = true;
+            for (int index = 0; index < parameters.length; index++) {
+                if (arguments[index] == null || !parameters[index].isAssignableFrom(arguments[index].getClass())) {
+                    compatible = false;
+                    break;
+                }
+            }
+            if (compatible) return method.invoke(null, arguments);
         }
         return null;
     }

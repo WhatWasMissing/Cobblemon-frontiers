@@ -15,10 +15,12 @@ The main interface is now based on the [Upgrader items](https://www.curseforge.c
 
 The catalogue also contains Pokémon contracts. Common, Rare, Epic, and Mythic
 contracts use progressively higher target values, so rarer Pokémon have lower
-success odds for the same wager. A successful contract delivers the Pokémon to
-the player's party or PC; if the installed Cobblemon API cannot accept it, the
-player receives an identity-preserving paper voucher containing the species,
-rarity, and shiny state. Hold that voucher in the main hand and use
+success odds for the same wager. Successful pulls are delivered server-side to
+the player's party, with Cobblemon's normal party overflow sending them to the
+PC; no operator or manual `/givepokemon` command is required. If the installed
+Cobblemon API cannot resolve the species or both stores have no room, the player
+receives an identity-preserving paper voucher containing the species, rarity,
+and shiny state. Hold that voucher in the main hand and use
 `/cobblemon_gacha redeem_voucher` after making room in the party or PC. Pokémon contracts always award one
 Pokémon, so item multipliers cannot be used to multiply Pokémon rewards.
 

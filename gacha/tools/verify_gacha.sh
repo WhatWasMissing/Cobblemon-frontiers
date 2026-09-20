@@ -96,6 +96,8 @@ rg -q 'SERVER_STOPPING|flushLedger' "$root/fabric/src/main/java/com/whatwasmissi
 rg -q 'ServerStoppingEvent|flushLedger' "$root/neoforge/src/main/java/com/whatwasmissing/cobblemongacha/CobblemonGachaNeoForge.java"
 rg -q 'PokemonRewardAdapter|GachaRarity\.LEGENDARY' "$root/common/src/main/java/com/whatwasmissing/cobblemongacha/core/GachaUpgradeService.java"
 rg -q 'CUSTOM_DATA|cobblemon_gacha_voucher|redeemVoucher' "$root/common/src/main/java/com/whatwasmissing/cobblemongacha/core/PokemonRewardAdapter.java"
+rg -q 'singletonInstance|getByIdentifier|normaliseIdentifier' "$root/common/src/main/java/com/whatwasmissing/cobblemongacha/core/PokemonRewardAdapter.java"
+rg -q 'method.getParameterCount\(\) == 1|method.invoke\(species, 10\)' "$root/common/src/main/java/com/whatwasmissing/cobblemongacha/core/PokemonRewardAdapter.java"
 rg -q 'GachaCompatibilityHooks|registerOptionalNamespace' "$root/common/src/main/java/com/whatwasmissing/cobblemongacha/api/GachaCompatibilityHooks.java"
 rg -q 'config\.enabled' "$root/common/src/main/java/com/whatwasmissing/cobblemongacha/core/GachaUpgradeService.java"
 rg -q 'BUTTON_ITEM_TARGETS|BUTTON_POKEMON_TARGETS' "$root/common/src/main/java/com/whatwasmissing/cobblemongacha/gui/UpgradeMenu.java"
