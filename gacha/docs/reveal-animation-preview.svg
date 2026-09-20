@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="760" viewBox="0 0 1200 760">
+  <rect width="1200" height="760" fill="#081018"/>
+  <text x="60" y="58" fill="#f3f7f8" font-family="sans-serif" font-size="27" font-weight="700" letter-spacing="2">BANNER REVEAL MOMENT</text>
+  <text x="60" y="88" fill="#a9bbc4" font-family="sans-serif" font-size="15">Client-only 2.4 second reveal — the server has already resolved and delivered the reward.</text>
+
+  <g font-family="sans-serif">
+    <g transform="translate(60 130)">
+      <rect width="260" height="390" rx="5" fill="#172634"/>
+      <rect width="260" height="4" fill="#70d8d4"/>
+      <text x="22" y="36" fill="#a9bbc4" font-size="13" font-weight="700" letter-spacing="1">0.0s · RESULT ARRIVES</text>
+      <rect x="18" y="62" width="224" height="228" fill="#0c1520"/>
+      <rect x="62" y="74" width="136" height="3" fill="#70d8d4"/>
+      <text x="130" y="104" fill="#70d8d4" font-size="12" text-anchor="middle" font-weight="700">LEGENDARY ARRIVAL</text>
+      <rect x="116" y="143" width="28" height="28" fill="#70d8d4" opacity=".23"/>
+      <rect x="126" y="133" width="8" height="48" fill="#70d8d4" opacity=".45"/>
+      <text x="130" y="222" fill="#f3f7f8" font-size="16" text-anchor="middle">Rayquaza</text>
+      <text x="130" y="247" fill="#a9bbc4" font-size="12" text-anchor="middle">The reveal begins</text>
+      <text x="130" y="348" fill="#a9bbc4" font-size="13" text-anchor="middle">Hero panel dims</text>
+      <text x="130" y="370" fill="#a9bbc4" font-size="13" text-anchor="middle">Banner motif starts</text>
+    </g>
+
+    <g transform="translate(340 130)">
+      <rect width="260" height="390" rx="5" fill="#172634"/>
+      <rect width="260" height="4" fill="#e97753"/>
+      <text x="22" y="36" fill="#a9bbc4" font-size="13" font-weight="700" letter-spacing="1">0.4s · MOTIF BUILDS</text>
+      <rect x="18" y="62" width="224" height="228" fill="#3c2529"/>
+      <g fill="#ffb36a"><rect x="58" y="215" width="5" height="28"/><rect x="92" y="184" width="5" height="22"/><rect x="123" y="150" width="5" height="30"/><rect x="156" y="194" width="5" height="18"/><rect x="190" y="171" width="5" height="30"/></g>
+      <text x="130" y="104" fill="#ffb36a" font-size="12" text-anchor="middle" font-weight="700">LEGENDARY ARRIVAL</text>
+      <rect x="109" y="141" width="42" height="42" fill="#ffb36a" opacity=".18"/>
+      <rect x="117" y="133" width="26" height="58" fill="#ffb36a" opacity=".2"/>
+      <text x="130" y="222" fill="#f3f7f8" font-size="16" text-anchor="middle">Rayquaza</text>
+      <text x="130" y="247" fill="#a9bbc4" font-size="12" text-anchor="middle">Banner-specific motion</text>
+      <text x="130" y="348" fill="#a9bbc4" font-size="13" text-anchor="middle">Ember: rising sparks</text>
+      <text x="130" y="370" fill="#a9bbc4" font-size="13" text-anchor="middle">Tidal: expanding waves</text>
+    </g>
+
+    <g transform="translate(620 130)">
+      <rect width="260" height="390" rx="5" fill="#172634"/>
+      <rect width="260" height="4" fill="#f0c26e"/>
+      <text x="22" y="36" fill="#a9bbc4" font-size="13" font-weight="700" letter-spacing="1">1.1s · SPRITE PEAK</text>
+      <rect x="18" y="62" width="224" height="228" fill="#3a3120"/>
+      <g stroke="#ffe4a4" stroke-width="3" fill="none" opacity=".75"><path d="M45 176h42M173 176h42M130 84v30M130 226v30"/><path d="M70 116l22 22M168 138l22-22M70 236l22-22M168 214l22 22"/></g>
+      <text x="130" y="104" fill="#ffe4a4" font-size="12" text-anchor="middle" font-weight="700">LEGENDARY ARRIVAL</text>
+      <g fill="#f0c26e"><rect x="113" y="130" width="34" height="8"/><rect x="105" y="138" width="50" height="24"/><rect x="98" y="162" width="18" height="10"/><rect x="144" y="162" width="18" height="10"/><rect x="112" y="172" width="36" height="12"/></g>
+      <text x="130" y="222" fill="#f3f7f8" font-size="16" text-anchor="middle">Rayquaza</text>
+      <text x="130" y="247" fill="#a9bbc4" font-size="12" text-anchor="middle">Real Cobblemon sprite</text>
+      <text x="130" y="348" fill="#a9bbc4" font-size="13" text-anchor="middle">Sprite scales 18 → 86 px</text>
+      <text x="130" y="370" fill="#a9bbc4" font-size="13" text-anchor="middle">No server packet or roll</text>
+    </g>
+
+    <g transform="translate(900 130)">
+      <rect width="260" height="390" rx="5" fill="#172634"/>
+      <rect width="260" height="4" fill="#a6e5b5"/>
+      <text x="22" y="36" fill="#a9bbc4" font-size="13" font-weight="700" letter-spacing="1">2.4s · RETURNS TO UI</text>
+      <rect x="18" y="62" width="224" height="228" fill="#183a34"/>
+      <rect x="36" y="78" width="188" height="3" fill="#67c78f"/>
+      <g fill="#a6e5b5"><rect x="82" y="114" width="14" height="5"/><rect x="164" y="126" width="14" height="5"/><rect x="64" y="180" width="14" height="5"/><rect x="190" y="194" width="14" height="5"/></g>
+      <text x="130" y="112" fill="#a6e5b5" font-size="12" text-anchor="middle" font-weight="700">FEATURED DROPS</text>
+      <rect x="48" y="132" width="46" height="56" fill="#101a25"/><rect x="48" y="132" width="46" height="2" fill="#b8c0c4"/><rect x="63" y="139" width="16" height="22" fill="#b8c0c4"/>
+      <rect x="105" y="132" width="46" height="56" fill="#101a25"/><rect x="105" y="132" width="46" height="2" fill="#f0c26e"/><rect x="120" y="139" width="16" height="22" fill="#f0c26e"/>
+      <rect x="162" y="132" width="46" height="56" fill="#101a25"/><rect x="162" y="132" width="46" height="2" fill="#f29bd5"/><rect x="177" y="139" width="16" height="22" fill="#f29bd5"/>
+      <text x="130" y="222" fill="#f3f7f8" font-size="16" text-anchor="middle">Rayquaza added</text>
+      <text x="130" y="247" fill="#a9bbc4" font-size="12" text-anchor="middle">History and roster are updated</text>
+      <text x="130" y="348" fill="#a9bbc4" font-size="13" text-anchor="middle">Draw/page actions resume</text>
+      <text x="130" y="370" fill="#a9bbc4" font-size="13" text-anchor="middle">Close remains available</text>
+    </g>
+  </g>
+
+  <rect x="60" y="565" width="1080" height="132" rx="5" fill="#101a25"/>
+  <text x="84" y="598" fill="#70d8d4" font-family="sans-serif" font-size="15" font-weight="700" letter-spacing="1">BANNER PERSONALITY</text>
+  <g font-family="sans-serif" font-size="14" fill="#a9bbc4">
+    <text x="84" y="632">Verdant Trails: leaf drift</text>
+    <text x="300" y="632">Ember &amp; Ash: rising embers</text>
+    <text x="584" y="632">Tidal Current: wave rings</text>
+    <text x="850" y="632">Voltage Circuit: circuit steps</text>
+    <text x="84" y="664">Frost: snowflake sparks</text>
+    <text x="300" y="664">Night: star sparks</text>
+    <text x="584" y="664">Beyond the Monuments: pillars + ring</text>
+    <text x="850" y="664">All others: their own geometric motif</text>
+  </g>
+</svg>

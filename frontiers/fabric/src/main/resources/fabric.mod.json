@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "id": "cobblemon_frontiers",
+  "version": "${version}",
+  "name": "Cobblemon Frontiers",
+  "description": "Anonymous regional spawn signals, field research, and privacy-safe capture bounties for Cobblemon.",
+  "authors": ["WhatWasMissing"],
+  "license": "MIT",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "com.whatwasmissing.spawnannouncements.CobblemonFrontiersFabric"
+    ],
+    "client": [
+      "com.whatwasmissing.spawnannouncements.CobblemonFrontiersFabricClient"
+    ]
+  },
+  "depends": {
+    "minecraft": "~1.21.1",
+    "fabricloader": ">=0.16.0",
+    "fabric-api": ">=0.110.0+1.21.1",
+    "cobblemon": ">=1.8.0"
+  }
+}

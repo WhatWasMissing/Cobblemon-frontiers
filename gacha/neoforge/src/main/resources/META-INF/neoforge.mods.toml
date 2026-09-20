@@ -1,0 +1,32 @@
+modLoader = "javafml"
+loaderVersion = "[4,)"
+license = "MIT"
+
+[[mods]]
+modId = "cobblemon_gacha"
+version = "${version}"
+displayName = "Cobblemon Gacha"
+authors = "WhatWasMissing"
+description = '''A Cobblemon draw board with tickets, rotating banners, rare Pokémon, and collection rewards.'''
+displayTest = "IGNORE_ALL_VERSION"
+
+[[dependencies.cobblemon_gacha]]
+modId = "minecraft"
+mandatory = true
+versionRange = "[1.21.1]"
+ordering = "NONE"
+side = "SERVER"
+
+[[dependencies.cobblemon_gacha]]
+modId = "neoforge"
+mandatory = true
+versionRange = "[21.1,)"
+ordering = "NONE"
+side = "SERVER"
+
+[[dependencies.cobblemon_gacha]]
+modId = "cobblemon"
+mandatory = true
+versionRange = "[1.8.0,)"
+ordering = "AFTER"
+side = "SERVER"

@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="456" viewBox="0 0 760 456">
+  <rect width="760" height="456" fill="#081018"/>
+  <rect x="0" y="0" width="760" height="62" fill="#101a25"/>
+  <rect y="60" width="760" height="2" fill="#70d8d4"/>
+  <text x="24" y="22" fill="#f3f7f8" font-family="sans-serif" font-size="13" font-weight="700" letter-spacing="1.2">COBBLEMON GACHA</text>
+  <text x="24" y="42" fill="#a9bbc4" font-family="sans-serif" font-size="10">A server-run draw board for building your roster</text>
+  <rect x="536" y="15" width="176" height="30" rx="2" fill="#223a4a"/>
+  <circle cx="552" cy="30" r="7" fill="#b69cff"/>
+  <text x="567" y="34" fill="#f3f7f8" font-family="sans-serif" font-size="10">Gacha Tickets: 12</text>
+  <path d="M728 16l12 12m0-12l-12 12" stroke="#a9bbc4" stroke-width="2"/>
+
+  <rect x="24" y="82" width="712" height="142" fill="#183a34"/>
+  <rect x="24" y="82" width="712" height="2" fill="#67c78f"/>
+  <rect x="376" y="84" width="2" height="140" fill="#67c78f" opacity=".3"/>
+  <rect x="378" y="84" width="2" height="140" fill="#a6e5b5" opacity=".1"/>
+  <text x="42" y="98" fill="#a6e5b5" font-family="sans-serif" font-size="9" font-weight="700" letter-spacing="1">ACTIVE THIS HOUR</text>
+  <text x="42" y="119" fill="#f3f7f8" font-family="sans-serif" font-size="16" font-weight="700">Verdant Trails</text>
+  <text x="42" y="139" fill="#a9bbc4" font-family="sans-serif" font-size="10">Grass, bug, and forest-dwelling partners.</text>
+  <text x="42" y="154" fill="#a9bbc4" font-family="sans-serif" font-size="9">Banner 1/18</text>
+  <text x="190" y="154" fill="#f6cc72" font-family="sans-serif" font-size="9">Next rotation in 46m</text>
+  <rect x="348" y="101" width="36" height="36" fill="#67c78f" opacity=".22"/>
+  <circle cx="366" cy="119" r="9" fill="#a6e5b5"/>
+  <path d="M366 111c-8 2-9 8-7 13 5-1 10-4 12-10 3 5 4 9 1 13-5 5-14 4-17 0" fill="none" stroke="#183a34" stroke-width="2"/>
+  <text x="404" y="96" fill="#a6e5b5" font-family="sans-serif" font-size="9" font-weight="700" letter-spacing="1">FEATURED DROPS</text>
+  <g font-family="sans-serif" text-anchor="middle">
+    <g><rect x="404" y="108" width="46" height="56" fill="#101a25"/><rect x="404" y="108" width="46" height="2" fill="#b8c0c4"/><g fill="#b8c0c4"><rect x="418" y="114" width="18" height="4"/><rect x="414" y="118" width="26" height="8"/><rect x="410" y="126" width="10" height="5"/><rect x="434" y="126" width="10" height="5"/></g><text x="427" y="139" fill="#f3f7f8" font-size="8">Bulbasaur</text><text x="427" y="152" fill="#b8c0c4" font-size="7">Common</text></g>
+    <g><rect x="454" y="108" width="46" height="56" fill="#101a25"/><rect x="454" y="108" width="46" height="2" fill="#75a9e6"/><g fill="#75a9e6"><rect x="467" y="114" width="20" height="4"/><rect x="462" y="118" width="30" height="8"/><rect x="458" y="126" width="12" height="5"/><rect x="484" y="126" width="12" height="5"/></g><text x="477" y="139" fill="#f3f7f8" font-size="8">Tangela</text><text x="477" y="152" fill="#75a9e6" font-size="7">Rare</text></g>
+    <g><rect x="504" y="108" width="46" height="56" fill="#101a25"/><rect x="504" y="108" width="46" height="2" fill="#c68bdf"/><g fill="#c68bdf"><rect x="517" y="114" width="20" height="4"/><rect x="512" y="118" width="30" height="8"/><rect x="508" y="126" width="12" height="5"/><rect x="534" y="126" width="12" height="5"/></g><text x="527" y="139" fill="#f3f7f8" font-size="8">Sceptile</text><text x="527" y="152" fill="#c68bdf" font-size="7">Epic</text></g>
+    <g><rect x="554" y="108" width="46" height="56" fill="#101a25"/><rect x="554" y="108" width="46" height="2" fill="#f0c26e"/><g fill="#f0c26e"><rect x="567" y="114" width="20" height="4"/><rect x="562" y="118" width="30" height="8"/><rect x="558" y="126" width="12" height="5"/><rect x="584" y="126" width="12" height="5"/></g><text x="577" y="139" fill="#f3f7f8" font-size="8">—</text><text x="577" y="152" fill="#f0c26e" font-size="7">Legend</text></g>
+    <g><rect x="604" y="108" width="46" height="56" fill="#101a25"/><rect x="604" y="108" width="46" height="2" fill="#f29bd5"/><g fill="#f29bd5"><rect x="617" y="114" width="20" height="4"/><rect x="612" y="118" width="30" height="8"/><rect x="608" y="126" width="12" height="5"/><rect x="634" y="126" width="12" height="5"/></g><text x="627" y="139" fill="#f3f7f8" font-size="8">Celebi</text><text x="627" y="152" fill="#f29bd5" font-size="7">Mythic</text></g>
+  </g>
+  <g stroke="#67c78f" stroke-width="2" fill="none"><path d="M665 104l-6 6 6 6m38-12l6 6-6 6"/></g>
+  <rect x="510" y="184" width="105" height="40" fill="#223a4a"/><rect x="510" y="184" width="3" height="40" fill="#67c78f"/>
+  <text x="545" y="201" fill="#f3f7f8" font-family="sans-serif" font-size="10" font-weight="700">DRAW 1</text><text x="545" y="216" fill="#a9bbc4" font-family="sans-serif" font-size="8">1 ticket</text>
+  <rect x="627" y="184" width="105" height="40" fill="#223a4a"/><rect x="627" y="184" width="3" height="40" fill="#a6e5b5"/>
+  <text x="662" y="201" fill="#f3f7f8" font-family="sans-serif" font-size="10" font-weight="700">DRAW 10</text><text x="662" y="216" fill="#a9bbc4" font-family="sans-serif" font-size="8">10 tickets</text>
+  <rect x="24" y="184" width="180" height="40" fill="#172634"/><rect x="24" y="184" width="3" height="40" fill="#f6cc72"/><text x="38" y="201" fill="#f3f7f8" font-family="sans-serif" font-size="10" font-weight="700">ITEM UPGRADER</text><text x="38" y="216" fill="#a9bbc4" font-family="sans-serif" font-size="8">Risk items for rewards</text>
+  <text x="220" y="201" fill="#a9bbc4" font-family="sans-serif" font-size="9">No coordinates. No public roll spam.</text><text x="220" y="216" fill="#a9bbc4" font-family="sans-serif" font-size="9">Tickets arrive every 10 captures.</text>
+
+  <rect x="24" y="232" width="712" height="72" fill="#183a34"/><rect x="24" y="232" width="712" height="2" fill="#67c78f"/>
+  <text x="42" y="247" fill="#a6e5b5" font-family="sans-serif" font-size="9" font-weight="700" letter-spacing="1">ODDS &amp; SAFETY NET</text>
+  <g font-family="sans-serif" font-size="8"><rect x="42" y="263" width="122" height="25" fill="#b8c0c4"/><text x="50" y="274" fill="#101a25">Common</text><text x="50" y="284" fill="#101a25">72.5%</text><rect x="178" y="263" width="122" height="25" fill="#75a9e6"/><text x="186" y="274" fill="#101a25">Rare</text><text x="186" y="284" fill="#101a25">21.0%</text><rect x="314" y="263" width="122" height="25" fill="#c68bdf"/><text x="322" y="274" fill="#101a25">Epic</text><text x="322" y="284" fill="#101a25">6.0%</text><rect x="450" y="263" width="122" height="25" fill="#f0c26e"/><text x="458" y="274" fill="#101a25">Legendary</text><text x="458" y="284" fill="#101a25">0.4%</text><rect x="586" y="263" width="122" height="25" fill="#f29bd5"/><text x="594" y="274" fill="#101a25">Mythic</text><text x="594" y="284" fill="#101a25">0.1%</text></g>
+  <text x="42" y="298" fill="#a9bbc4" font-family="sans-serif" font-size="8">Rare+ pity: 50 · Legendary pity: 100 · Shiny: 2.00%</text>
+
+  <text x="24" y="326" fill="#a6e5b5" font-family="sans-serif" font-size="9" font-weight="700" letter-spacing="1">RECENT PULLS</text><text x="130" y="326" fill="#a9bbc4" font-family="sans-serif" font-size="9">Your last results are private to you</text>
+  <g fill="#172634"><rect x="24" y="340" width="84" height="48"/><rect x="114" y="340" width="84" height="48"/><rect x="204" y="340" width="84" height="48"/><rect x="294" y="340" width="84" height="48"/><rect x="384" y="340" width="84" height="48"/><rect x="474" y="340" width="84" height="48"/><rect x="564" y="340" width="84" height="48"/><rect x="654" y="340" width="84" height="48"/></g>
+  <text x="31" y="368" fill="#f3f7f8" font-family="sans-serif" font-size="8">Celebi</text><rect x="35" y="348" width="10" height="4" fill="#f29bd5"/><rect x="32" y="352" width="16" height="7" fill="#f29bd5"/>
+  <text x="24" y="406" fill="#f6cc72" font-family="sans-serif" font-size="9">Rare pity: 12 / 50 · Legendary pity: 2 / 100</text><text x="600" y="406" fill="#a9bbc4" font-family="sans-serif" font-size="9">ARROWS switch · ESC close</text>
+</svg>

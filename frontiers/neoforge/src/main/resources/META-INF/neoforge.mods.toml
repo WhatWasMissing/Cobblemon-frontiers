@@ -1,0 +1,32 @@
+modLoader = "javafml"
+loaderVersion = "[4,)"
+license = "MIT"
+
+[[mods]]
+modId = "cobblemon_frontiers"
+version = "${version}"
+displayName = "Cobblemon Frontiers"
+authors = "WhatWasMissing"
+description = '''Anonymous regional spawn signals, field research, and privacy-safe capture bounties for Cobblemon.'''
+displayTest = "IGNORE_ALL_VERSION"
+
+[[dependencies.cobblemon_frontiers]]
+modId = "minecraft"
+mandatory = true
+versionRange = "[1.21.1]"
+ordering = "NONE"
+side = "SERVER"
+
+[[dependencies.cobblemon_frontiers]]
+modId = "neoforge"
+mandatory = true
+versionRange = "[21.1,)"
+ordering = "NONE"
+side = "SERVER"
+
+[[dependencies.cobblemon_frontiers]]
+modId = "cobblemon"
+mandatory = true
+versionRange = "[1.8.0,)"
+ordering = "AFTER"
+side = "SERVER"

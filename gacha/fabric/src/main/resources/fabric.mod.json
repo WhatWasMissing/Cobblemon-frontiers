@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "id": "cobblemon_gacha",
+  "version": "${version}",
+  "name": "Cobblemon Gacha",
+  "description": "A Cobblemon draw board with tickets, rotating banners, rare Pokémon, and collection rewards.",
+  "authors": ["WhatWasMissing"],
+  "license": "MIT",
+  "environment": "*",
+  "entrypoints": {
+    "main": ["com.whatwasmissing.cobblemongacha.CobblemonGachaFabric"],
+    "client": ["com.whatwasmissing.cobblemongacha.CobblemonGachaFabricClient"]
+  },
+  "depends": {
+    "minecraft": "~1.21.1",
+    "fabricloader": ">=0.16.0",
+    "fabric-api": ">=0.110.0+1.21.1",
+    "cobblemon": ">=1.8.0"
+  }
+}
