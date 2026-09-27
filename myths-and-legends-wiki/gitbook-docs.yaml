@@ -1,0 +1,13 @@
+$schema: https://api.gitbook.com/gitbook-docs.yaml
+site:
+  title: Myths and Legends Field Guide
+  structure:
+    - type: space
+      key: myths-and-legends
+      title: Myths and Legends Field Guide
+      path: myths-and-legends
+      default: true
+      content:
+        directory: ./
+        language: en
+
